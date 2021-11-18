@@ -219,7 +219,7 @@ def CLIP(src):
 if __name__ == "__main__":
     print("Start script...\n")
 
-    path = sys.path[0]
+    path = sys.path[0]+"/images"
     infn = "DSCF3396.RAF"
     outfn = "demosaiced.tiff"
     suffix = ".RAF"
