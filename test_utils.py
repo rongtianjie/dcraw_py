@@ -41,7 +41,7 @@ def image_comp(path1, path2):
     else:
         print("size does not match!")
 
-def channe_avg(img):
+def channel_avg(img):
     red_avg = img[:,:,0].mean()
     green_avg = img[:,:,1].mean()
     blue_avg = img[:,:,2].mean()

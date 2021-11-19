@@ -67,7 +67,7 @@ def importRawImage(infn, fileList, suffix, verbose = False):
     elif len(infPaths) == 1:
         if verbose:
             print("Import [{}]\n".format(infPaths[0]))
-        return rawpy.imread(infPaths[0])
+        infPath = infPaths[0]
     else:
         for i in range(len(infPaths)):
             print("[{}]{}".format(i+1, infPaths[i]))
@@ -76,7 +76,8 @@ def importRawImage(infn, fileList, suffix, verbose = False):
             n = input("Invalid input. Please input the number from 1 to {}".format(len(infPaths)))
         if verbose:
             print("\nImport [{}]\n".format(infPaths[int(n)-1]))
-        return rawpy.imread(infPaths[int(n)-1])   
+        infPath = infPaths[int(n)-1]  
+    return rawpy.imread(infPath), infPath
 
 def bad_fix(fileList, rawData, verbose = False):
     # Fix bad pixels with rawpy.enhance
@@ -109,27 +110,35 @@ def crop_image(src, top, bottom, left, right):
     # Crop the image with margin info (2D or 3D)
     
     if len(src.shape) == 2:
-        dst = src[top : src.shape[0]-bottom, left : src.shape[1]-right].copy()
+        rslt = src[top : src.shape[0]-bottom, left : src.shape[1]-right].copy()
     elif len(src.shape) == 3:
-        dst = src[top : src.shape[0]-bottom, left : src.shape[1]-right, :].copy()
+        rslt = src[top : src.shape[0]-bottom, left : src.shape[1]-right, :].copy()
     else:
         print("Error: [crop_image] The input image must be in 2 or 3 dimensions.")
-    return dst
+    return rslt
 
-def adjust_maximum(raw, maximum_thr = 0.75):
-    global maximum
-    real_max = raw.raw_image_visible.max()
-    if real_max > 0 and real_max < maximum and real_max > maximum * maximum_thr:
-        maximum = real_max
+def subtract(raw, dark_img, fileList, verbose = False):
+    if verbose:
+        print("Subtraction using dark frame...")
 
-def subtraction(raw, USE_MIN_BLC = 0):
+    darkData, infPath = importRawImage(dark_img, fileList, ".RAF", verbose)
+    darkData_badfix = bad_fix([infPath], darkData, verbose)
+    noise_floor = darkData_badfix.raw_image_visible.max()
+
+    if verbose:
+        print("The noise floor is {}\n".format(noise_floor))
+
+    rslt = raw.raw_image_visible.astype(np.int32) - noise_floor
+    return CLIP(rslt)
+
+def blc(raw, USE_MIN_BLC = 0):
     # BLC on raw image pattern
     # Input should be rawpy object
 
     # Output will be crop by rawpy "_visible" 
     # On GFX100S, image size is 8752 * 11662
-
-    dst = raw.raw_image_visible.astype(np.float64)
+    
+    rslt = raw.raw_image_visible.astype(np.int32)
 
     # if USE_MIN_BLC:
     #     sort_level = np.sort(raw.raw_image_visible)
@@ -137,18 +146,22 @@ def subtraction(raw, USE_MIN_BLC = 0):
     #         bl = sort_level[0]
     #     else:
     #         bl = sort_level[1]
-    #         dst -= bl
+    #         rslt -= bl
     # else:
     for i, bl in enumerate(raw.black_level_per_channel):
-        dst[raw.raw_colors_visible == i] -= bl
+        rslt[raw.raw_colors_visible == i] -= bl
 
-    dst = CLIP(dst)
-    return dst
+    return CLIP(rslt)
 
+def adjust_maximum(raw, maximum_thr = 0.75):
+    global maximum
+    real_max = raw.raw_image_visible.max()
+    if real_max > 0 and real_max < maximum and real_max > maximum * maximum_thr:
+        maximum = real_max
 
-def scale_colors(raw, verbose = False):
-    src_blc = subtraction(raw)
-
+def scale_colors(src, raw, verbose = False):
+    if src.shape != raw.raw_image.shape:
+        src_blc = blc(raw)
 
     if verbose:
         print("Start white balance correction with camera setting.")
@@ -174,12 +187,12 @@ def scale_colors(raw, verbose = False):
     for i, scale_co in  enumerate(scale_coeff):
         scale_matrix[raw.raw_colors_visible == i] = scale_co
     
-    dst = CLIP(src_blc * scale_matrix)
+    rslt = CLIP(src_blc * scale_matrix)
     
     if verbose:
         print("White balance finished.\n")
 
-    return dst
+    return rslt
 
 
 def demosaicing(src, Bayer_Pattern, DEMOSACING_METHOD = 0, verbose = False):
@@ -198,23 +211,23 @@ def demosaicing(src, Bayer_Pattern, DEMOSACING_METHOD = 0, verbose = False):
 
     if verbose:
         print("Demosacing using [{}]...".format(method))
-    dst = method(src, Bayer_Pattern)
+    rslt = method(src, Bayer_Pattern)
 
     if verbose:
         print("Demosacing finished.\n")
 
-    return dst
+    return rslt
 
 def auto_bright(src):
-    dst = src * 4.9 + 1000
-    dst[dst>65535] = 65535
-    return dst
+    rslt = src * 4.9 + 1000
+    rslt[rslt>65535] = 65535
+    return rslt
 
 def CLIP(src):
-    dst = src.copy()
-    dst[dst>65536] = 65535
-    dst[dst<0] = 0
-    return dst
+    rslt = src.copy()
+    rslt[rslt>65536] = 65535
+    rslt[rslt<0] = 0
+    return rslt
 
 if __name__ == "__main__":
 
@@ -223,12 +236,13 @@ if __name__ == "__main__":
     outfn = ""
     suffix = ".RAF"
     verbose = True
+    USE_DARK = False
 
-    opts, args = getopt.getopt(sys.argv[1:], "-h-i:-p:-o:-v",["help","path=","ifile=","ofile="])
+    opts, args = getopt.getopt(sys.argv[1:], "-h-i:-p:-o:-v-K:",["help","path=","ifile=","ofile=","dark="])
 
     for opt, arg in opts:
         if opt in ("-h", "--help"):
-            print("rawpy_new.py -p <ImgPath> -i <InputFile> -o <OutputFile> -v")
+            print("rawpy_new.py -p <ImgPath> -i <InputFile> -o <OutputFile> -K <Dark frame>")
             sys.exit()
         elif opt in ("-p", "--path"):
             path = arg
@@ -238,24 +252,30 @@ if __name__ == "__main__":
             outfn = arg
         elif opt in ("-v"):
             verbose = True
+        elif opt in ("-K", "--dark"):
+            dark_frame = arg
+            USE_DARK = True
     
     if (infn == "" or outfn == ""):
-        print("Error: rawpy_new.py -p <ImgPath> -i <InputFile> -o <OutputFile>")
+        print("Error: rawpy_new.py -p <ImgPath> -i <InputFile> -o <OutputFile> -K <Dark frame>")
         sys.exit(2)
 
     fileList = FindAllSuffix(path, suffix, verbose)
 
-    rawData = importRawImage(infn, fileList, suffix, verbose)
-    # imageio.imsave("raw.tiff", rawData.raw_image)
+    rawData, __ = importRawImage(infn, fileList, suffix, verbose)
 
     rawData_badfix = bad_fix(fileList, rawData, verbose)
 
-    adjust_maximum(rawData_badfix)
-    
-    rawImage_wb = scale_colors(rawData_badfix, verbose)
+    if USE_DARK:
+        img_sub = subtract(rawData_badfix, dark_frame, fileList, verbose)
+        scale_in = img_sub
+    else:
+        scale_in = None
 
-    # image_demosaiced = demosaicing(rawImage_wb, "RGGB", 2, verbose)
-    image_demosaiced = demosaicing(rawData_badfix.raw_image_visible, "RGGB", 0, verbose)
+    adjust_maximum(rawData_badfix)
+    rawImage_wb = scale_colors(scale_in, rawData_badfix, verbose)
+
+    image_demosaiced = demosaicing(rawImage_wb, "RGGB", 0, verbose)
 
     imageio.imsave("demosaic.tiff", image_demosaiced.astype(np.uint16))
     
