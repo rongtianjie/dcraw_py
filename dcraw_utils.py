@@ -264,7 +264,7 @@ if __name__ == "__main__":
             USE_DARK = True
     
     if (infn == ""):
-        print("Error: rawpy_new.py -p <ImgPath> -i <InputFile> -o <OutputFile> -K <Dark frame>")
+        print("Error: dcraw_utils.py -p <ImgPath> -i <InputFile> -o <OutputFile> -K <Dark frame>")
         sys.exit(2)
 
     fileList = FindAllSuffix(path, suffix, verbose)
