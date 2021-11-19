@@ -1,3 +1,5 @@
+# All operation will be in dtype = float64
+
 import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib as mpl
@@ -214,14 +216,11 @@ def CLIP(src):
     dst[dst<0] = 0
     return dst
 
-
-
 if __name__ == "__main__":
-    print("Start script...\n")
 
-    path = sys.path[0]+"/images"
-    infn = "DSCF3396.RAF"
-    outfn = "demosaiced.tiff"
+    path = sys.path[0]
+    infn = ""
+    outfn = ""
     suffix = ".RAF"
     verbose = True
 
@@ -256,22 +255,7 @@ if __name__ == "__main__":
     rawImage_wb = scale_colors(rawData_badfix, verbose)
 
     # image_demosaiced = demosaicing(rawImage_wb, "RGGB", 2, verbose)
-    image_demosaiced = demosaicing(rawData_badfix.raw_image_visible, "RGGB", 2, verbose)
-
-
-    print(image_demosaiced.shape)
-    red_avg = image_demosaiced[:,:,0].mean()
-    green_avg = image_demosaiced[:,:,1].mean()
-    blue_avg = image_demosaiced[:,:,2].mean()
-    print(red_avg/green_avg, 1, blue_avg/green_avg)
+    image_demosaiced = demosaicing(rawData_badfix.raw_image_visible, "RGGB", 0, verbose)
 
     imageio.imsave("demosaic.tiff", image_demosaiced.astype(np.uint16))
-
-    reference = rawData.postprocess(gamma=(1,1), no_auto_bright=True, output_bps=16, use_camera_wb = True)
-    red_avg_ref = reference[:,:,0].mean()
-    green_avg_ref = reference[:,:,1].mean()
-    blue_avg_ref = reference[:,:,2].mean()
-    print(red_avg_ref/green_avg_ref, 1, blue_avg_ref/green_avg_ref)
-    imageio.imsave("ref.tiff", reference.astype(np.uint16))
-
     
