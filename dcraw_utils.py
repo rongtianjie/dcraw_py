@@ -233,7 +233,8 @@ if __name__ == "__main__":
 
     path = sys.path[0]
     infn = ""
-    outfn = ""
+    if "." in infn:
+        outfn = path + infn.split(".", 1)[0]
     suffix = ".RAF"
     verbose = True
     USE_DARK = False
@@ -242,21 +243,27 @@ if __name__ == "__main__":
 
     for opt, arg in opts:
         if opt in ("-h", "--help"):
-            print("rawpy_new.py -p <ImgPath> -i <InputFile> -o <OutputFile> -K <Dark frame>")
+            man_file = sys.path[0] + "/manual"
+            if os.path.isfile(man_file):
+                file_object = open(man_file)
+                manual = file_object.read()
+                print(manual)
+            else:
+                print("Can not find the manual. Please refer to the script.")
             sys.exit()
         elif opt in ("-p", "--path"):
             path = arg
         elif opt in ("-i", "--ifile"):
             infn = arg
         elif opt in ("-o", "--ofile"):
-            outfn = arg
+            outfn += "_" + arg + ".tiff"
         elif opt in ("-v"):
             verbose = True
         elif opt in ("-K", "--dark"):
             dark_frame = arg
             USE_DARK = True
     
-    if (infn == "" or outfn == ""):
+    if (infn == ""):
         print("Error: rawpy_new.py -p <ImgPath> -i <InputFile> -o <OutputFile> -K <Dark frame>")
         sys.exit(2)
 
@@ -277,5 +284,5 @@ if __name__ == "__main__":
 
     image_demosaiced = demosaicing(rawImage_wb, "RGGB", 0, verbose)
 
-    imageio.imsave("demosaic.tiff", image_demosaiced.astype(np.uint16))
+    imageio.imsave(outfn, image_demosaiced.astype(np.uint16))
     
