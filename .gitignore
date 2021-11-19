@@ -2,3 +2,4 @@
 *.RAF
 *.TIFF
 *.tiff
+/__pycache__/
