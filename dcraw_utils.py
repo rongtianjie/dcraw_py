@@ -1,12 +1,9 @@
 # All operation will be in dtype = float64
 
 import numpy as np
-from matplotlib import pyplot as plt
-import matplotlib as mpl
 import rawpy
 import rawpy.enhance
 import imageio
-import time
 # from PIL import Image
 import cv2
 import os
@@ -26,6 +23,12 @@ right_margin = 144
 
 # Define default pixel max value
 maximum = 65535
+
+def read_tiff(infn):
+    return cv2.imread(infn, cv2.IMREAD_UNCHANGED)
+
+def save_image_16(outfn, src):
+    imageio.imsave(outfn, src.astype(np.uint16))
 
 def FindAllSuffix(path, suffix, verbose = False):
     # Find all specific format of file under certain path
@@ -228,6 +231,9 @@ def CLIP(src):
     rslt[rslt>65536] = 65535
     rslt[rslt<0] = 0
     return rslt
+    
+def color_check_correction():
+    return 0 
 
 if __name__ == "__main__":
 
@@ -284,5 +290,5 @@ if __name__ == "__main__":
 
     image_demosaiced = demosaicing(rawImage_wb, "RGGB", 0, verbose)
 
-    imageio.imsave(outfn, image_demosaiced.astype(np.uint16))
+    save_image_16(outfn, image_demosaiced)
     

@@ -41,4 +41,4 @@ if __name__ == "__main__":
 
     test_utils.channel_avg(reference)
 
-    imageio.imsave(outfn + "_ref.tiff", reference.astype(np.uint16))
+    dcraw_utils.save_image_16(outfn + "_ref.tiff", reference)
