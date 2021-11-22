@@ -55,8 +55,9 @@ def FindAllSuffix(path, suffix, verbose = False):
 
 def importRawImage(infn, fileList, suffix, verbose = False):
     # Import the raw data of the image with rawpy.imread()
-
-    # return a rawpy object
+    #
+    # Input the filename and the search field path list
+    # Return a rawpy object
 
     if "." not in infn:
         infn = infn + suffix
@@ -84,6 +85,9 @@ def importRawImage(infn, fileList, suffix, verbose = False):
 
 def bad_fix(fileList, rawData, verbose = False):
     # Fix bad pixels with rawpy.enhance
+    # 
+    # Input the rawpy object and image list
+    # return a rawpy object with bad pixel fixed 
     if len(fileList) >= 1:
         if len(fileList) <= 10:
             sample_num = len(fileList)
@@ -121,6 +125,8 @@ def crop_image(src, top, bottom, left, right):
     return rslt
 
 def subtract(raw, dark_img, fileList, verbose = False):
+    # subtract dark frame to remove noise floor
+    # Input: bayer pattern image, dark frame filename,
     if verbose:
         print("Subtraction using dark frame...")
 
