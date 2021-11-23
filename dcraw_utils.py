@@ -24,6 +24,10 @@ right_margin = 144
 # Define default pixel max value
 maximum = 65535
 
+xyz_srgb = np.array([[3.2404542, -1.5371385, -0.4985314],
+                    [-0.9692660, 1.8760108, 0.0415560],
+                    [0.0556434, -0.2040259, 1.0572252]])
+
 def read_tiff(infn):
     return cv2.imread(infn, cv2.IMREAD_UNCHANGED)
 
@@ -238,6 +242,14 @@ def CLIP(src):
     rslt[rslt<0] = 0
     return rslt
     
+def camera_to_srgb(src, raw):
+    if src.shape[2] != 3:
+        print("The input image should be 3-channel.")
+        exit(1)
+    else:
+        camera_xyz = raw.rgb_xyz_matrix[:3][:]
+    return rslt
+
 def color_check_correction():
     return 0 
 

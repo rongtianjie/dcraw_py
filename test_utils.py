@@ -3,6 +3,9 @@ import cv2
 from matplotlib import pyplot as plt
 # mpl.rcParams['figure.figsize'] = 50, 25
 import math
+import sys
+import rawpy
+import dcraw_utils
 
 def image_hist(image):
     # 3-channel RGB image
@@ -79,7 +82,7 @@ def raw_info(raw):
     print(raw.raw_type)
 
     print("rgb_xyz_matrix")
-    print(raw.rgb_xyz_matrix)
+    print(raw.rgb_xyz_matrix[:3][:])
 
     print("tone_curve")
     print(raw.tone_curve)
@@ -89,3 +92,15 @@ def raw_info(raw):
 
     print("max()")
     print(raw.raw_image.max())
+
+if __name__ == "__main__":
+    infn = "DSCF3396.RAF"
+    suffix = ".RAF"
+
+    if infn == "":
+        infn = sys.argv[1]
+
+    fileList = dcraw_utils.FindAllSuffix(sys.path[0], suffix)
+    rawData, __ = dcraw_utils.importRawImage(infn, fileList, suffix)
+
+    raw_info(rawData)
