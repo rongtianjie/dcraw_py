@@ -37,12 +37,10 @@ if __name__ == "__main__":
 
     image_srgb = dcraw_utils.camera_to_srgb(image_demosaiced, rawData_badfix, verbose)
 
-    test_utils.channel_avg(image_srgb)
-
-    imageio.imsave(outfn + "_srgb.tiff", image_srgb.astype(np.uint16))
+    dcraw_utils.save_image_16(outfn + "_srgb.tiff", image_srgb, verbose)
 
     reference = rawData.postprocess(gamma=(1,1), no_auto_bright=True, output_bps=16, use_camera_wb = True, no_auto_scale=False)
 
-    test_utils.channel_avg(reference)
+    dcraw_utils.save_image_16(outfn + "_demosaic.tiff", image_demosaiced, verbose)
 
     dcraw_utils.save_image_16(outfn + "_ref.tiff", reference, verbose)

@@ -24,9 +24,13 @@ right_margin = 144
 # Define default pixel max value
 maximum = 65535
 
-xyz_srgb = np.array([[3.2404542, -1.5371385, -0.4985314],
-                    [-0.9692660, 1.8760108, 0.0415560],
-                    [0.0556434, -0.2040259, 1.0572252]])
+# sRGB to XYZ matrix
+# From http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
+xyz_srgb = np.array([[0.4124564, 0.3575761, 0.1804375],
+                    [0.2126729, 0.7151522, 0.0721750],
+                    [0.0193339, 0.1191920, 0.9503041]])
+
+d65_white = np.array([0.95047, 1, 1.08883])
 
 def read_tiff(infn):
     return cv2.imread(infn, cv2.IMREAD_UNCHANGED)
@@ -243,20 +247,33 @@ def CLIP(src):
     rslt[rslt>65536] = 65535
     rslt[rslt<0] = 0
     return rslt
+
+def cam_rgb_coeff(cam_xyz):
+    cam_xyz = cam_xyz[:3][:]
+    cam_rgb = np.dot(xyz_srgb, cam_xyz)
+    # Normalize cam_rgb
+    cam_rgb_norm = (cam_rgb.T / cam_rgb.sum(axis = 1)).T 
+    return cam_rgb_norm
     
 def camera_to_srgb(src, raw, verbose = False):
     if verbose:
         print("Start camera rgb to srgb conversion...")
-    shape = src.shape
-    if shape[2] != 3:
+
+    if src.shape[2] != 3:
         print("The input image should be 3-channel.")
         exit(1)
     else:
-        xyz = np.dot(src, raw.rgb_xyz_matrix[:3][:].T)
-        srgb = np.dot(xyz, xyz_srgb.T)
+        rgb_cam = np.linalg.pinv(cam_rgb_coeff(raw.rgb_xyz_matrix))
+
+    # img_srgb = np.zeros_like(src)
+    # for i in range(src.shape[0]):
+    #     for j in range(src.shape[1]):
+    #         img_srgb[i][j] = np.dot(rgb_cam,src[i][j].T).T
+
+    img_srgb = np.dot(src, rgb_cam.T)
     if verbose:
         print("Conversion done.\n")
-    return srgb
+    return CLIP(img_srgb)
 
 def color_check_correction():
     return 0 

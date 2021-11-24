@@ -82,7 +82,7 @@ def raw_info(raw):
     print(raw.raw_type)
 
     print("rgb_xyz_matrix")
-    print(raw.rgb_xyz_matrix[:3][:])
+    print(raw.rgb_xyz_matrix)
 
     print("tone_curve")
     print(raw.tone_curve)
