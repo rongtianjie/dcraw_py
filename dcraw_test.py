@@ -12,10 +12,7 @@ if __name__ == "__main__":
         outfn = path + infn.split(".", 1)[0]
     suffix = ".RAF"
     verbose = True
-    USE_DARK = True
     dark_frame = ""
-    if dark_frame == "":
-        USE_DARK = False
 
     fileList = dcraw_utils.FindAllSuffix(path, suffix, verbose)
 
@@ -24,7 +21,7 @@ if __name__ == "__main__":
 
     rawData_badfix = dcraw_utils.bad_fix(fileList, rawData, verbose)
 
-    if USE_DARK:
+    if dark_frame!="":
         img_sub = dcraw_utils.subtract(rawData_badfix, dark_frame, fileList, verbose)
         scale_in = img_sub
     else:

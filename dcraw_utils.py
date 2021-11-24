@@ -32,6 +32,8 @@ xyz_srgb = np.array([[0.4124564, 0.3575761, 0.1804375],
 
 d65_white = np.array([0.95047, 1, 1.08883])
 
+APPLY_BLC = True
+
 def read_tiff(infn):
     return cv2.imread(infn, cv2.IMREAD_UNCHANGED)
 
@@ -150,7 +152,7 @@ def subtract(raw, dark_img, fileList, verbose = False):
     rslt = raw.raw_image_visible.astype(np.int32) - noise_floor
     return CLIP(rslt)
 
-def blc(raw, USE_MIN_BLC = 0):
+def blc(raw):
     # BLC on raw image pattern
     # Input should be rawpy object
 
@@ -159,14 +161,6 @@ def blc(raw, USE_MIN_BLC = 0):
     
     rslt = raw.raw_image_visible.astype(np.int32)
 
-    # if USE_MIN_BLC:
-    #     sort_level = np.sort(raw.raw_image_visible)
-    #     if sort_level[0] == 0:
-    #         bl = sort_level[0]
-    #     else:
-    #         bl = sort_level[1]
-    #         rslt -= bl
-    # else:
     for i, bl in enumerate(raw.black_level_per_channel):
         rslt[raw.raw_colors_visible == i] -= bl
 
@@ -179,8 +173,11 @@ def adjust_maximum(raw, maximum_thr = 0.75):
         maximum = real_max
 
 def scale_colors(src, raw, verbose = False):
-    if src==None or src.shape != raw.raw_image.shape:
-        src_blc = blc(raw)
+    if APPLY_BLC:
+        if src==None or src.shape != raw.raw_image_visible.shape:
+            src_blc = blc(raw)
+    else:
+        src_blc = raw.raw_image_visible.astype(np.int32)
 
     if verbose:
         print("Start white balance correction with camera setting.")
