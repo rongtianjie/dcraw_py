@@ -7,13 +7,15 @@ import test_utils
 if __name__ == "__main__":
 
     path = sys.path[0] + "/"
-    infn = "DSCF1366.RAF"
+    infn = "DSCF3396.RAF"
     if "." in infn:
         outfn = path + infn.split(".", 1)[0]
     suffix = ".RAF"
     verbose = True
     USE_DARK = True
-    dark_frame = "DSCF1371.RAF"
+    dark_frame = ""
+    if dark_frame == "":
+        USE_DARK = False
 
     fileList = dcraw_utils.FindAllSuffix(path, suffix, verbose)
 
@@ -33,9 +35,11 @@ if __name__ == "__main__":
     # image_demosaiced = demosaicing(rawImage_wb, "RGGB", 2, verbose)
     image_demosaiced = dcraw_utils.demosaicing(rawImage_wb, "RGGB", 0, verbose)
 
-    test_utils.channel_avg(image_demosaiced)
+    image_srgb = dcraw_utils.camera_to_srgb(image_demosaiced, rawData_badfix, verbose)
 
-    imageio.imsave(outfn + "_demosaic.tiff", image_demosaiced.astype(np.uint16))
+    test_utils.channel_avg(image_srgb)
+
+    imageio.imsave(outfn + "_srgb.tiff", image_srgb.astype(np.uint16))
 
     reference = rawData.postprocess(gamma=(1,1), no_auto_bright=True, output_bps=16, use_camera_wb = True, no_auto_scale=False)
 

@@ -173,7 +173,7 @@ def adjust_maximum(raw, maximum_thr = 0.75):
         maximum = real_max
 
 def scale_colors(src, raw, verbose = False):
-    if src.shape != raw.raw_image.shape:
+    if src==None or src.shape != raw.raw_image.shape:
         src_blc = blc(raw)
 
     if verbose:
@@ -242,13 +242,18 @@ def CLIP(src):
     rslt[rslt<0] = 0
     return rslt
     
-def camera_to_srgb(src, raw):
-    if src.shape[2] != 3:
+def camera_to_srgb(src, raw, verbose = False):
+    shape = src.shape
+    if shape[2] != 3:
         print("The input image should be 3-channel.")
         exit(1)
     else:
-        camera_xyz = raw.rgb_xyz_matrix[:3][:]
-    return rslt
+        cam = src.reshape((shape[0]*shape[1], shape[2]))
+        xyz_2d = np.dot(raw.rgb_xyz_matrix[:3][:], cam.T).T
+        srgb_2d = np.dot(xyz_srgb, xyz_2d.T).T
+
+        image_srgb = srgb_2d.reshape(shape)
+    return image_srgb
 
 def color_check_correction():
     return 0 
