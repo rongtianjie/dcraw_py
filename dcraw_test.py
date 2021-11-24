@@ -45,4 +45,4 @@ if __name__ == "__main__":
 
     test_utils.channel_avg(reference)
 
-    dcraw_utils.save_image_16(outfn + "_ref.tiff", reference)
+    dcraw_utils.save_image_16(outfn + "_ref.tiff", reference, verbose)

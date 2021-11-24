@@ -31,8 +31,10 @@ xyz_srgb = np.array([[3.2404542, -1.5371385, -0.4985314],
 def read_tiff(infn):
     return cv2.imread(infn, cv2.IMREAD_UNCHANGED)
 
-def save_image_16(outfn, src):
+def save_image_16(outfn, src, verbose = False):
     imageio.imsave(outfn, src.astype(np.uint16))
+    if verbose:
+        print("Write file to disk [{}]".format(outfn))
 
 def FindAllSuffix(path, suffix, verbose = False):
     # Find all specific format of file under certain path
@@ -243,17 +245,18 @@ def CLIP(src):
     return rslt
     
 def camera_to_srgb(src, raw, verbose = False):
+    if verbose:
+        print("Start camera rgb to srgb conversion...")
     shape = src.shape
     if shape[2] != 3:
         print("The input image should be 3-channel.")
         exit(1)
     else:
-        cam = src.reshape((shape[0]*shape[1], shape[2]))
-        xyz_2d = np.dot(raw.rgb_xyz_matrix[:3][:], cam.T).T
-        srgb_2d = np.dot(xyz_srgb, xyz_2d.T).T
-
-        image_srgb = srgb_2d.reshape(shape)
-    return image_srgb
+        xyz = np.dot(src, raw.rgb_xyz_matrix[:3][:].T)
+        srgb = np.dot(xyz, xyz_srgb.T)
+    if verbose:
+        print("Conversion done.\n")
+    return srgb
 
 def color_check_correction():
     return 0 
