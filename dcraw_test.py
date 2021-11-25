@@ -1,7 +1,5 @@
 import dcraw_utils
 import sys
-import numpy as np
-import imageio
 import test_utils
 
 if __name__ == "__main__":

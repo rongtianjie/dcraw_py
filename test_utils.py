@@ -4,7 +4,6 @@ from matplotlib import pyplot as plt
 # mpl.rcParams['figure.figsize'] = 50, 25
 import math
 import sys
-import rawpy
 import dcraw_utils
 
 def image_hist(image):

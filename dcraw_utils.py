@@ -10,7 +10,6 @@ import os
 import colour_demosaicing
 import random
 import sys
-import getopt
 
 
 # Define margin for raw data
