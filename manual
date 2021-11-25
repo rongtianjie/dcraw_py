@@ -1,7 +1,0 @@
-dcraw_utils.py
-Usage: python dcraw_utils.py [OPTION]...
--p <path>       The whole images path. Used to fix bad pixels
--i <filename>   Input filename (Must be contained in the path)
--o <suf>        Append "_suf" to input filename
--K <filename>   Subtract dark frame (16-bit raw)
--v              Verbose: print progress messages

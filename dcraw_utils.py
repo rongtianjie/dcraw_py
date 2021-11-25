@@ -143,14 +143,17 @@ def adjust_maximum(raw, maximum_thr):
     if real_max > 0 and real_max < maximum and real_max > maximum * maximum_thr:
         maximum = real_max
 
-def subtract(raw, dark_img, fileList, verbose = False):
+def subtract(raw, dark_img, fileList = None, verbose = False):
     # subtract dark frame to remove noise floor
     # Input: bayer pattern image, dark frame filename,
     if verbose:
         print("Subtraction using dark frame...")
 
-    infPath = findRawImage(dark_img, fileList, ".RAF", verbose)
-    darkData = importRawImage(infPath)
+    if fileList == None:
+        darkData = importRawImage(dark_img)
+    else:
+        infPath = findRawImage(dark_img, fileList, ".RAF", verbose)
+        darkData = importRawImage(infPath)
 
     darkData_badfix = bad_fix([infPath], darkData, verbose)
     noise_floor = darkData_badfix.raw_image_visible.max()
