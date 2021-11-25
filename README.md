@@ -8,19 +8,19 @@
 
 ## Usage
 
- Simply import the `dcraw` library.
+ Simply import the `dcraw` library in your Python script.
 
  ```
  dcraw.imread(infile, path = None, suffix = ".RAF", verbose = False)
  ``` 
- will return the original rawpy rawdata object. Similar to `rawpy.imread`.
+ will return a `rawpy.RawPy` object. Similar to `rawpy.imread()`.
 
 The main ISP implementation is contained in 
  ```
  dcraw.postprocessing(rawData, path = None, suffix = ".RAF", adjust_maximum_thr = 0.75, dark_frame = None, bayer_pattern = "RGGB", demosacing_method = 0, verbose = False)
  ```
 
-### Parameters
+#### Parameters
 - *infile* (str) - The input image filename. 
 
     - if `path` is defined, the `infile` do not have to containe the whole file path. The script will automatically search all the files under `path` matches the `path` including the subfolders. If there are multiple files match the keyword, the script will launch a choosen selection prompt.
@@ -47,8 +47,19 @@ The main ISP implementation is contained in
     - 1 - colour_demosaicing.demosaicing_CFA_Bayer_Malvar2004
     - 2 - colour_demosaicing.demosaicing_CFA_Bayer_Menon2007
 
-        > Malvar2004 will generate false color when image has bright dots.
-        >
-        > Menon2007 needs more than 20 GB memory.
+    > Malvar2004 will generate false color when image has bright dots.
+    >
+    > Menon2007 needs more than 20 GB memory.
 
 - *verbose* (bool) - Whether showing the progress log.
+
+## Reference
+
+[Libraw docs](https://www.libraw.org/docs)
+
+[rawpy api reference](https://letmaik.github.io/rawpy/api/index.html)
+
+[dcraw annotated & outlined](https://ninedegreesbelow.com/files/dcraw-c-code-annotated-code.html)
+
+
+
