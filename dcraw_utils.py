@@ -1,4 +1,4 @@
-# All operation will be in dtype = float64
+# All multiplication and division will be in dtype.float64
 
 import numpy as np
 import rawpy
@@ -8,7 +8,6 @@ import imageio
 import cv2
 import os
 import colour_demosaicing
-import math
 import random
 import sys
 import getopt
@@ -65,7 +64,7 @@ def FindAllSuffix(path, suffix, verbose = False):
     print("Find {} [{}] files under [{}].\n".format(len(result), suffix, path))
     return result
 
-def importRawImage(infn, fileList, suffix, verbose = False):
+def findRawImage(infn, fileList, suffix, verbose = False):
     # Import the raw data of the image with rawpy.imread()
     #
     # Input the filename and the search field path list
@@ -93,7 +92,10 @@ def importRawImage(infn, fileList, suffix, verbose = False):
         if verbose:
             print("\nImport [{}]\n".format(infPaths[int(n)-1]))
         infPath = infPaths[int(n)-1]  
-    return rawpy.imread(infPath), infPath
+    return infPath
+
+def importRawImage(infPath):
+    return rawpy.imread(infPath)
 
 def bad_fix(fileList, rawData, verbose = False):
     # Fix bad pixels with rawpy.enhance
@@ -136,13 +138,21 @@ def crop_image(src, top, bottom, left, right):
         print("Error: [crop_image] The input image must be in 2 or 3 dimensions.")
     return rslt
 
+def adjust_maximum(raw, maximum_thr):
+    global maximum
+    real_max = raw.raw_image_visible.max()
+    if real_max > 0 and real_max < maximum and real_max > maximum * maximum_thr:
+        maximum = real_max
+
 def subtract(raw, dark_img, fileList, verbose = False):
     # subtract dark frame to remove noise floor
     # Input: bayer pattern image, dark frame filename,
     if verbose:
         print("Subtraction using dark frame...")
 
-    darkData, infPath = importRawImage(dark_img, fileList, ".RAF", verbose)
+    infPath = findRawImage(dark_img, fileList, ".RAF", verbose)
+    darkData = importRawImage(infPath)
+
     darkData_badfix = bad_fix([infPath], darkData, verbose)
     noise_floor = darkData_badfix.raw_image_visible.max()
 
@@ -165,12 +175,6 @@ def blc(raw):
         rslt[raw.raw_colors_visible == i] -= bl
 
     return CLIP(rslt)
-
-def adjust_maximum(raw, maximum_thr = 0.75):
-    global maximum
-    real_max = raw.raw_image_visible.max()
-    if real_max > 0 and real_max < maximum and real_max > maximum * maximum_thr:
-        maximum = real_max
 
 def scale_colors(src, raw, verbose = False):
     if APPLY_BLC:
@@ -275,60 +279,4 @@ def camera_to_srgb(src, raw, verbose = False):
 def color_check_correction():
     return 0 
 
-if __name__ == "__main__":
-
-    path = sys.path[0]
-    infn = ""
-    if "." in infn:
-        outfn = path + infn.split(".", 1)[0]
-    suffix = ".RAF"
-    verbose = True
-    USE_DARK = False
-
-    opts, args = getopt.getopt(sys.argv[1:], "-h-i:-p:-o:-v-K:",["help","path=","ifile=","ofile=","dark="])
-
-    for opt, arg in opts:
-        if opt in ("-h", "--help"):
-            man_file = sys.path[0] + "/manual"
-            if os.path.isfile(man_file):
-                file_object = open(man_file)
-                manual = file_object.read()
-                print(manual)
-            else:
-                print("Can not find the manual. Please refer to the script.")
-            sys.exit()
-        elif opt in ("-p", "--path"):
-            path = arg
-        elif opt in ("-i", "--ifile"):
-            infn = arg
-        elif opt in ("-o", "--ofile"):
-            outfn += "_" + arg + ".tiff"
-        elif opt in ("-v"):
-            verbose = True
-        elif opt in ("-K", "--dark"):
-            dark_frame = arg
-            USE_DARK = True
-    
-    if (infn == ""):
-        print("Error: dcraw_utils.py -p <ImgPath> -i <InputFile> -o <OutputFile> -K <Dark frame>")
-        sys.exit(2)
-
-    fileList = FindAllSuffix(path, suffix, verbose)
-
-    rawData, __ = importRawImage(infn, fileList, suffix, verbose)
-
-    rawData_badfix = bad_fix(fileList, rawData, verbose)
-
-    if USE_DARK:
-        img_sub = subtract(rawData_badfix, dark_frame, fileList, verbose)
-        scale_in = img_sub
-    else:
-        scale_in = None
-
-    adjust_maximum(rawData_badfix)
-    rawImage_wb = scale_colors(scale_in, rawData_badfix, verbose)
-
-    image_demosaiced = demosaicing(rawImage_wb, "RGGB", 0, verbose)
-
-    save_image_16(outfn, image_demosaiced)
     
