@@ -35,7 +35,7 @@ def postprocessing(rawData, suffix = ".RAF", adjust_maximum_thr = 0.75, dark_fra
 
 if __name__ == "__main__":
 
-    path = sys.path[0]
+    path = sys.path[0] + "/"
     # infn = ""
     infn = "DSCF3396.RAF"
     if "." in infn:
