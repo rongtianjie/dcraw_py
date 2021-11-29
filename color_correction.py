@@ -6,28 +6,10 @@ from colour_checker_detection import detect_colour_checkers_segmentation
 import dcraw
 import dcraw_utils
 
-def srgb_to_lrgb(image_srgb):
-    # the input image should be 16-bit sRGB (0-65535)
-    image_srgb = image_srgb / 65535
-    gamma = ((image_srgb + 0.055) / 1.055) ** 2.4
-    scale = image_srgb / 12.92
-    image_lrgb = np.where (image_srgb > 0.04045, gamma, scale)
-    return dcraw_utils.CLIP((image_lrgb * 65535).astype(np.uint16))
-
-def lrgb_to_srgb(image_lrgb):
-    # the input image should be 16-bit linear RGB (0-65535)
-    image_lrgb = image_lrgb / 65535
-    gamma = 1.055*(image_lrgb ** (1/2.4)) -0.055
-    scale = image_lrgb * 12.92
-    image_srgb = np.where (image_lrgb > 0.0031308, gamma, scale)
-    return dcraw_utils.CLIP((image_srgb * 65535).astype(np.uint16))
-
-def getColorCorrectionSwatches(image_srgb, IMAGE_BLUR = True):
-    # the input image should be 16-bit sRGB (0-65535)
-    image_lrgb = srgb_to_lrgb(image_srgb)
+def getColorCorrectionSwatches(image_lrgb, IMAGE_BLUR = True):
 
     if IMAGE_BLUR:
-        image_blur = cv2.GaussianBlur(image_lrgb, (10, 10), 0)
+        image_blur = cv2.GaussianBlur(image_lrgb, (9, 9), 0)
     else:
         image_blur = image_lrgb
     
@@ -50,23 +32,43 @@ def detection(image):
             colour.cctf_encoding(
                 np.clip(colour_checker + masks_i * 0.25, 0, 1)))
 
-    if len(SWATCHES) == 1 and len(SWATCHES[0]) == 1:
-        return SWATCHES[0][0]
+    print("Found {} swatches.".format(len(SWATCHES)))
 
-def correction(image, swatch):
+    if len(SWATCHES) == 1:
+        return SWATCHES[0]
+    else:
+        print("ERROR!!")
+
+def correction(image_lrgb, swatch):
     # the input image should be 16-bit sRGB
-    image_lrgb = srgb_to_lrgb(image)
-    D65 = colour.ILLUMINANTS['CIE 1931 2 Degree Standard Observer']['D65']
-    REFERENCE_COLOUR_CHECKER = colour.COLOURCHECKERS['ColorChecker 2005']
+    D65 = colour.CCS_ILLUMINANTS['CIE 1931 2 Degree Standard Observer']['D65']
+    REFERENCE_COLOUR_CHECKER = colour.CCS_COLOURCHECKERS['ColorChecker 2005']
 
     REFERENCE_SWATCHES = colour.XYZ_to_RGB(
         colour.xyY_to_XYZ(list(REFERENCE_COLOUR_CHECKER.data.values())),
         REFERENCE_COLOUR_CHECKER.illuminant, D65,
         colour.RGB_COLOURSPACES['sRGB'].matrix_XYZ_to_RGB)
 
-    cc_image = colour.colour_correction(image_lrgb, swatch, REFERENCE_SWATCHES, 'Finlayson 2015')
+    swatches_xyY = colour.XYZ_to_xyY(colour.RGB_to_XYZ(swatch, D65, D65, colour.RGB_COLOURSPACES['sRGB'].matrix_RGB_to_XYZ))
+    colour_checker = colour.characterisation.ColourChecker(
+        "src_image", 
+        OrderedDict(zip(REFERENCE_COLOUR_CHECKER.data.keys(), swatches_xyY)), 
+        D65)
+    colour.plotting.plot_multi_colour_checkers([REFERENCE_COLOUR_CHECKER, colour_checker])
 
-    return lrgb_to_srgb(cc_image)
+    swatches_f = colour.colour_correction(swatch, swatch, REFERENCE_SWATCHES)
+    swatches_f_xyY = colour.XYZ_to_xyY(colour.RGB_to_XYZ(swatches_f, D65, D65, colour.RGB_COLOURSPACES['sRGB'].matrix_RGB_to_XYZ))
+    colour_checker = colour.characterisation.ColourChecker(
+        '{0} - CC'.format("src_image"),
+        OrderedDict(zip(REFERENCE_COLOUR_CHECKER.data.keys(), swatches_f_xyY)),
+        D65)
+    colour.plotting.plot_multi_colour_checkers(
+        [REFERENCE_COLOUR_CHECKER, colour_checker])
+
+    cc_image = colour.colour_correction(image_lrgb, swatch, REFERENCE_SWATCHES)
+    colour.plotting.plot_image(colour.cctf_encoding(cc_image))
+
+    return cc_image
 
 
 
