@@ -3,8 +3,6 @@ import numpy as np
 from collections import OrderedDict
 import colour
 from colour_checker_detection import detect_colour_checkers_segmentation
-import dcraw
-import dcraw_utils
 
 def getColorCorrectionSwatches(image_lrgb, IMAGE_BLUR = True):
 

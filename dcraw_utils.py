@@ -4,7 +4,6 @@ import numpy as np
 import rawpy
 import rawpy.enhance
 import imageio
-# from PIL import Image
 import cv2
 import os
 import colour_demosaicing
@@ -125,17 +124,6 @@ def bad_fix(fileList, rawData, verbose = False):
         if verbose:
             print("Bad pixel fixing finished.\n")
     return rawData
-
-def crop_image(src, top, bottom, left, right):
-    # Crop the image with margin info (2D or 3D)
-    
-    if len(src.shape) == 2:
-        rslt = src[top : src.shape[0]-bottom, left : src.shape[1]-right].copy()
-    elif len(src.shape) == 3:
-        rslt = src[top : src.shape[0]-bottom, left : src.shape[1]-right, :].copy()
-    else:
-        print("Error: [crop_image] The input image must be in 2 or 3 dimensions.")
-    return rslt
 
 def adjust_maximum(raw, maximum_thr):
     global maximum
