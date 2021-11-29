@@ -4,6 +4,7 @@ from collections import OrderedDict
 import colour
 from colour_checker_detection import detect_colour_checkers_segmentation
 import dcraw
+import dcraw_utils
 
 def srgb_to_lrgb(image_srgb):
     # the input image should be 16-bit sRGB (0-65535)
@@ -11,7 +12,7 @@ def srgb_to_lrgb(image_srgb):
     gamma = ((image_srgb + 0.055) / 1.055) ** 2.4
     scale = image_srgb / 12.92
     image_lrgb = np.where (image_srgb > 0.04045, gamma, scale)
-    return dcraw.CLIP((image_lrgb * 65535).astype(np.uint16))
+    return dcraw_utils.CLIP((image_lrgb * 65535).astype(np.uint16))
 
 def lrgb_to_srgb(image_lrgb):
     # the input image should be 16-bit linear RGB (0-65535)
@@ -19,10 +20,10 @@ def lrgb_to_srgb(image_lrgb):
     gamma = 1.055*(image_lrgb ** (1/2.4)) -0.055
     scale = image_lrgb * 12.92
     image_srgb = np.where (image_lrgb > 0.0031308, gamma, scale)
-    return dcraw.CLIP((image_srgb * 65535).astype(np.uint16))
+    return dcraw_utils.CLIP((image_srgb * 65535).astype(np.uint16))
 
 def getColorCorrectionSwatches(image_srgb, IMAGE_BLUR = True):
-
+    # the input image should be 16-bit sRGB (0-65535)
     image_lrgb = srgb_to_lrgb(image_srgb)
 
     if IMAGE_BLUR:
