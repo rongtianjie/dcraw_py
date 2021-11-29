@@ -1,4 +1,4 @@
-# Dcraw implemented by python (continuously updating...)
+# Dcraw implemented by Python (continuously updating...)
 
 ## Introduction
 
@@ -47,9 +47,12 @@ The main ISP implementation is contained in
     - 1 - colour_demosaicing.demosaicing_CFA_Bayer_Malvar2004
     - 2 - colour_demosaicing.demosaicing_CFA_Bayer_Menon2007
 
-    > Malvar2004 will generate false color when image has bright dots.
-    >
-    > Menon2007 needs more than 20 GB memory.
+        > Malvar2004 will generate false color when image has bright dots.
+        >
+        > Menon2007 needs more than 20 GB memory.
+
+- *output_srgb* (bool) - Whether output srgb color space. Default: False
+    - If set to "True", the functurn will return 2 values [linear, srgb]
 
 - *verbose* (bool) - Whether showing the progress log.
 

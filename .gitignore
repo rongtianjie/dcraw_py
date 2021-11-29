@@ -4,3 +4,5 @@
 *.tiff
 *.xmp
 /__pycache__/
+playground.ipynb
+color_correction.ipynb

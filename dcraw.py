@@ -2,17 +2,18 @@ import dcraw_utils
 import sys
 import getopt
 import os
+import numpy as np
 
 def imread(infile, path = None, suffix = ".RAF", verbose = False):
     if path == None:
         rawData = dcraw_utils.importRawImage(infile)
     else:
         fileList = dcraw_utils.FindAllSuffix(path, suffix, verbose)
-        infPath = dcraw_utils.findRawImage(infn, fileList, suffix, verbose)
+        infPath = dcraw_utils.findRawImage(infile, fileList, suffix, verbose)
         rawData = dcraw_utils.importRawImage(infPath)
     return rawData
 
-def postprocessing(rawData, suffix = ".RAF", adjust_maximum_thr = 0.75, dark_frame = None, path = None, bayer_pattern = "RGGB", demosacing_method = 0, verbose = False):
+def postprocessing(rawData, suffix = ".RAF", adjust_maximum_thr = 0.75, dark_frame = None, path = None, bayer_pattern = "RGGB", demosacing_method = 0, output_srgb = False, verbose = False):
     if path == None:
         rawData_badfix = rawData
     else:
@@ -28,10 +29,12 @@ def postprocessing(rawData, suffix = ".RAF", adjust_maximum_thr = 0.75, dark_fra
     
     image_demosaiced = dcraw_utils.demosaicing(rawImage_wb, bayer_pattern, demosacing_method, verbose)
 
-    image_srgb = dcraw_utils.camera_to_srgb(image_demosaiced, rawData_badfix, verbose)
-
-    return image_srgb
-
+    if output_srgb:
+        image_srgb = dcraw_utils.camera_to_srgb(image_demosaiced, rawData_badfix, verbose)
+        return image_demosaiced.astype(np.uint16), image_srgb.astype(np.uint16)
+    else:
+        return image_demosaiced.astype(np.uint16)
+        
 
 if __name__ == "__main__":
 
@@ -73,6 +76,6 @@ if __name__ == "__main__":
 
     rawData = imread(infn, path = path, verbose = verbose)
 
-    img_rgb = postprocessing(rawData, verbose = verbose)
+    image_demosaiced, image_srgb = postprocessing(rawData, output_srgb = True, verbose = verbose)
 
-    dcraw_utils.save_image_16(outfn + "_srgb.tiff", img_rgb, verbose = verbose)
+    dcraw_utils.save_image_16(outfn + "_srgb.tiff", image_srgb, verbose = verbose)
