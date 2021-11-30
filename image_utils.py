@@ -4,10 +4,6 @@ import os
 import sys
 import imageio
 
-
-
-
-
 def read_tiff(infn):
     return cv2.imread(infn, cv2.IMREAD_UNCHANGED)
 
@@ -82,17 +78,17 @@ def crop_image(src, top, bottom, left, right):
 
 def CLIP(src):
     rslt = src.copy()
-    if rslt.dtype == "uint16":
-        rslt[rslt>65536] = 65535
-        rslt[rslt<0] = 0
+    if rslt.dtype == "uint16" or rslt.dtype == "int32":
+        np.clip(rslt, 0, 65535)
     elif rslt.dtype == "uint8":
-        rslt[rslt>255] = 255
-        rslt[rslt<0] = 0
+        np.clip(rslt, 0, 255)
     elif rslt.dtype == "float32" or rslt.dtype == "float64":
-        rslt[rslt>1] = 1
-        rslt[rslt<0] = 0
+        np.clip(rslt, 0, 1)
     else:
         c = input("Can't recognize the data type. \nPlease set the ceil valus manually: ")
-        rslt[rslt>c] = c
-        rslt[rslt<0] = 0
+        np.clip(rslt, 0, c)
     return rslt
+
+if __name__ == "__main__":
+    print("This script contained several image basic operations.")
+    exit(0)

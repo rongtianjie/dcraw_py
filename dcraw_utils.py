@@ -3,12 +3,9 @@
 import numpy as np
 import rawpy
 import rawpy.enhance
-import imageio
-import cv2
-import os
 import colour_demosaicing
 import random
-import sys
+import image_utils
 
 
 # Define margin for raw data
@@ -30,67 +27,6 @@ xyz_srgb = np.array([[0.4124564, 0.3575761, 0.1804375],
 d65_white = np.array([0.95047, 1, 1.08883])
 
 APPLY_BLC = True
-
-def read_tiff(infn):
-    return cv2.imread(infn, cv2.IMREAD_UNCHANGED)
-
-def save_image_16(outfn, src, verbose = False):
-    imageio.imsave(outfn, src.astype(np.uint16))
-    if verbose:
-        print("Write file to disk [{}]".format(outfn))
-
-def FindAllSuffix(path, suffix, verbose = False):
-    # Find all specific format of file under certain path
-
-    # path: target path
-    # suffix: file suffix e.g. ".RAF"/"RAF"
-    # verbose: whether print the found path
-
-    # return a list contain all the file paths
-    
-    result = []
-    if not suffix.startswith("."):
-        suffix = "." + suffix
-    for root, dirs, files in os.walk(path, topdown=False):
-        for file in files:
-            if file.lower().endswith(suffix.lower()):
-                file_path = os.path.join(root, file)
-                file_path = file_path.replace("\\", "/")
-                result.append(file_path)
-                if verbose:
-                    print(file_path)
-    print("Find {} [{}] files under [{}].\n".format(len(result), suffix, path))
-    return result
-
-def findRawImage(infn, fileList, suffix, verbose = False):
-    # Import the raw data of the image with rawpy.imread()
-    #
-    # Input the filename and the search field path list
-    # Return a rawpy object
-
-    if "." not in infn:
-        infn = infn + suffix
-    infPaths = []
-    for file in fileList:
-        if infn in file:
-            infPaths.append(file)
-    if len(infPaths) == 0:
-        print("Error: Cannot find [{}] under the path.".format(infn))
-        sys.exit(2)
-    elif len(infPaths) == 1:
-        if verbose:
-            print("Import [{}]\n".format(infPaths[0]))
-        infPath = infPaths[0]
-    else:
-        for i in range(len(infPaths)):
-            print("[{}]{}".format(i+1, infPaths[i]))
-        n = input("\nFound Multiple files. Please choose the right image [1]-[{}]:".format(len(infPaths)))
-        while int(n)-1 not in range(len(infPaths)):
-            n = input("Invalid input. Please input the number from 1 to {}".format(len(infPaths)))
-        if verbose:
-            print("\nImport [{}]\n".format(infPaths[int(n)-1]))
-        infPath = infPaths[int(n)-1]  
-    return infPath
 
 def importRawImage(infPath):
     return rawpy.imread(infPath)
@@ -140,7 +76,7 @@ def subtract(raw, dark_img, fileList = None, verbose = False):
     if fileList == None:
         darkData = importRawImage(dark_img)
     else:
-        infPath = findRawImage(dark_img, fileList, ".RAF", verbose)
+        infPath = image_utils.findRawImage(dark_img, fileList, ".RAF", verbose)
         darkData = importRawImage(infPath)
 
     darkData_badfix = bad_fix([infPath], darkData, verbose)
@@ -150,7 +86,7 @@ def subtract(raw, dark_img, fileList = None, verbose = False):
         print("The noise floor is {}\n".format(noise_floor))
 
     rslt = raw.raw_image_visible.astype(np.int32) - noise_floor
-    return CLIP(rslt)
+    return image_utils.CLIP(rslt)
 
 def blc(raw):
     # BLC on raw image pattern
@@ -164,7 +100,7 @@ def blc(raw):
     for i, bl in enumerate(raw.black_level_per_channel):
         rslt[raw.raw_colors_visible == i] -= bl
 
-    return CLIP(rslt)
+    return image_utils.CLIP(rslt)
 
 def scale_colors(src, raw, verbose = False):
     if APPLY_BLC:
@@ -266,7 +202,6 @@ def camera_to_srgb(src, raw, verbose = False):
         print("Conversion done.\n")
     return CLIP(img_srgb)
 
-def color_check_correction():
-    return 0 
-
-    
+if __name__ == "__main__":
+    print("This is the dcraw utils script.")
+    exit(0)

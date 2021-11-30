@@ -3,13 +3,14 @@ import sys
 import getopt
 import os
 import numpy as np
+import image_utils
 
 def imread(infile, path = None, suffix = ".RAF", verbose = False):
     if path == None:
         rawData = dcraw_utils.importRawImage(infile)
     else:
-        fileList = dcraw_utils.FindAllSuffix(path, suffix, verbose)
-        infPath = dcraw_utils.findRawImage(infile, fileList, suffix, verbose)
+        fileList = image_utils.FindAllSuffix(path, suffix, verbose)
+        infPath = image_utils.findRawImage(infile, fileList, suffix, verbose)
         rawData = dcraw_utils.importRawImage(infPath)
     return rawData
 
@@ -17,7 +18,7 @@ def postprocessing(rawData, suffix = ".RAF", adjust_maximum_thr = 0.75, dark_fra
     if path == None:
         rawData_badfix = rawData
     else:
-        fileList = dcraw_utils.FindAllSuffix(path, suffix, verbose)
+        fileList = image_utils.FindAllSuffix(path, suffix, verbose)
         rawData_badfix = dcraw_utils.bad_fix(fileList, rawData, verbose)
     dcraw_utils.adjust_maximum(rawData_badfix, adjust_maximum_thr)
 
@@ -78,4 +79,4 @@ if __name__ == "__main__":
 
     image_demosaiced, image_srgb = postprocessing(rawData, output_srgb = True, verbose = verbose)
 
-    dcraw_utils.save_image_16(outfn + "_srgb.tiff", image_srgb, verbose = verbose)
+    image_utils.save_image_16(outfn + "_srgb.tiff", image_srgb, verbose = verbose)
