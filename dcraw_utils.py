@@ -133,12 +133,12 @@ def scale_colors(src, raw, verbose = False):
     for i, scale_co in  enumerate(scale_coeff):
         scale_matrix[raw.raw_colors_visible == i] = scale_co
     
-    rslt = CLIP(src_blc * scale_matrix)
+    rslt = src_blc * scale_matrix
     
     if verbose:
         print("White balance finished.\n")
 
-    return rslt
+    return image_utils.CLIP(rslt.astype(np.int32))
 
 
 def demosaicing(src, Bayer_Pattern, DEMOSACING_METHOD = 0, verbose = False):
@@ -162,17 +162,6 @@ def demosaicing(src, Bayer_Pattern, DEMOSACING_METHOD = 0, verbose = False):
     if verbose:
         print("Demosacing finished.\n")
 
-    return rslt
-
-def auto_bright(src):
-    rslt = src * 4.9 + 1000
-    rslt[rslt>65535] = 65535
-    return rslt
-
-def CLIP(src):
-    rslt = src.copy()
-    rslt[rslt>65536] = 65535
-    rslt[rslt<0] = 0
     return rslt
 
 def cam_rgb_coeff(cam_xyz):
@@ -200,7 +189,7 @@ def camera_to_srgb(src, raw, verbose = False):
     img_srgb = np.dot(src, rgb_cam.T)
     if verbose:
         print("Conversion done.\n")
-    return CLIP(img_srgb)
+    return image_utils.CLIP(img_srgb.astype(np.int32))
 
 if __name__ == "__main__":
     print("This is the dcraw utils script.")

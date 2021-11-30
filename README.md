@@ -13,7 +13,7 @@
  ```
  dcraw.imread(infile, path = None, suffix = ".RAF", verbose = False)
  ``` 
- will return a `rawpy.RawPy` object. Similar to `rawpy.imread()`.
+ will return a `rawpy.RawPy` object. Almost the same as `rawpy.imread()`.
 
 The main ISP implementation is contained in 
  ```

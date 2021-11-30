@@ -80,14 +80,17 @@ def CLIP(src):
     rslt = src.copy()
     if rslt.dtype == "uint16" or rslt.dtype == "int32":
         np.clip(rslt, 0, 65535)
+        return rslt.astype(np.uint16)
     elif rslt.dtype == "uint8":
         np.clip(rslt, 0, 255)
+        return rslt.astype(np.uint8)
     elif rslt.dtype == "float32" or rslt.dtype == "float64":
         np.clip(rslt, 0, 1)
+        return rslt
     else:
         c = input("Can't recognize the data type. \nPlease set the ceil valus manually: ")
         np.clip(rslt, 0, c)
-    return rslt
+        return rslt
 
 if __name__ == "__main__":
     print("This script contained several image basic operations.")
