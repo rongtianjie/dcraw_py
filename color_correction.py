@@ -4,11 +4,42 @@ from collections import OrderedDict
 import colour
 from colour_checker_detection import detect_colour_checkers_segmentation
 
+class CreateSpyderCheck:
+    name = "SpyderChecker 24"
+
+    data = OrderedDict()
+    data["Aqua"] = np.array([0.29131, 0.39533, 0.4102])
+    data["Lavender"] = np.array([0.29860, 0.28411, 0.22334])
+    data["Evergreen"] = np.array([0.36528, 0.46063, 0.12519])
+    data["Steel Blue"] = np.array([0.27138, 0.29748, 0.17448])
+    data["Classic Light Skin"] = np.array([0.42207, 0.37609, 0.34173])
+    data["Classic Dark Skin"] = np.array([0.44194, 0.38161, 0.09076])
+    data["Primary Orange"] = np.array([0.54238, 0.40556, 0.2918])
+    data["Blueprint"] = np.array([0.22769, 0.21517, 0.09976])
+    data["Pink"] = np.array([0.50346, 0.32519, 0.1826])
+    data["Violet"] = np.array([0.30813, 0.24004, 0.05791])
+    data["Apple Green"] = np.array([0.40262, 0.50567, 0.44332])
+    data["Sunflower"] = np.array([0.50890, 0.43959, 0.4314])
+    data["Primary Cyan"] = np.array([0.19792, 0.30072, 0.16111])
+    data["Primary Magenta"] = np.array([0.42785, 0.26565, .018832])
+    data["Primary Yellow"] = np.array([0.47315, 0.47936, 0.63319])
+    data["Primary Red"] = np.array([0.59685, 0.31919, 0.11896])
+    data["Primary Green"] = np.array([0.32471, 0.51999, 0.22107])
+    data["Primary Blue"] = np.array([0.19215, 0.15888, 0.04335])
+    data["Card White"] = np.array([0.35284, 0.36107, 0.90104])
+    data["20% Gray"] = np.array([0.35137, 0.36134, 0.57464])
+    data["40% Gray"] = np.array([0.35106, 0.36195, 0.34707])
+    data["60% Gray"] = np.array([0.35129, 0.36209, 0.18102])
+    data["80% Gray"] = np.array([0.35181, 0.36307, 0.07794])
+    data["Card Black"] = np.array([0.34808, 0.35030, 0.02284])
+
+    illuminant = np.array([ 0.34570291,  0.3585386 ])
+
 def getColorCorrectionSwatches(image_lrgb, IMAGE_BLUR = True, verbose = False):
     # The input image should convert to linear RGB with colour.cctf_decoding()
 
     if IMAGE_BLUR:
-        image_blur = cv2.GaussianBlur(image_lrgb, (9, 9), 0)
+        image_blur = cv2.GaussianBlur(image_lrgb, (11, 11), 0)
     else:
         image_blur = image_lrgb
     
@@ -42,7 +73,7 @@ def detection(image, verbose = False):
 def correction(image_lrgb, swatch, verbose = False):
     # the input image should be 16-bit sRGB
     D65 = colour.CCS_ILLUMINANTS['CIE 1931 2 Degree Standard Observer']['D65']
-    REFERENCE_COLOUR_CHECKER = colour.CCS_COLOURCHECKERS['ColorChecker 2005']
+    REFERENCE_COLOUR_CHECKER = CreateSpyderCheck()
 
     if verbose:
         print("CHECKER:")
