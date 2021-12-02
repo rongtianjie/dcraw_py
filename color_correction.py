@@ -38,6 +38,9 @@ class CreateSpyderCheck:
 def getColorCorrectionSwatches(image_lrgb, IMAGE_BLUR = True, verbose = False):
     # The input image should convert to linear RGB with colour.cctf_decoding()
 
+    if max(image_lrgb.shape[0], image_lrgb.shape[1]) > 1000:
+        ratio = 800 / max(image_lrgb.shape[0], image_lrgb.shape[1])
+        image_lrgb = cv2.resize(image_lrgb, (0, 0), fx = ratio, fy = ratio)
     if IMAGE_BLUR:
         image_blur = cv2.GaussianBlur(image_lrgb, (11, 11), 0)
     else:

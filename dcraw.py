@@ -14,7 +14,7 @@ def imread(infile, path = None, suffix = ".RAF", verbose = False):
         rawData = dcraw_utils.importRawImage(infPath)
     return rawData
 
-def postprocessing(rawData, suffix = ".RAF", adjust_maximum_thr = 0.75, dark_frame = None, path = None, bayer_pattern = "RGGB", demosacing_method = 0, output_srgb = False, verbose = False):
+def postprocessing(rawData, suffix = ".RAF", adjust_maximum_thr = 0.75, dark_frame = None, path = None, bayer_pattern = "RGGB", demosacing_method = 0, output_srgb = False, verbose = False, debug = False):
     if path == None:
         rawData_badfix = rawData
     else:
@@ -30,18 +30,26 @@ def postprocessing(rawData, suffix = ".RAF", adjust_maximum_thr = 0.75, dark_fra
     
     image_demosaiced = dcraw_utils.demosaicing(rawImage_wb, bayer_pattern, demosacing_method, verbose)
 
+    if debug:
+        image_utils.save_image_16("debug_demosaiced.tiff", image_demosaiced)
+
     if output_srgb:
         image_srgb = dcraw_utils.camera_to_srgb(image_demosaiced, rawData_badfix, verbose)
+        if debug:
+            image_utils.save_image_16("debug_srgb.tiff", image_srgb)
+
         return image_demosaiced.astype(np.uint16), image_srgb.astype(np.uint16)
     else:
         return image_demosaiced.astype(np.uint16)
+
+
         
 
 if __name__ == "__main__":
 
     path = sys.path[0] + "/"
     # infn = ""
-    infn = "DSCF3396.RAF"
+    infn = "DSCF5420.RAF"
     if "." in infn:
         outfn = path + infn.split(".", 1)[0]
     suffix = ".RAF"
@@ -77,6 +85,6 @@ if __name__ == "__main__":
 
     rawData = imread(infn, path = path, verbose = verbose)
 
-    image_demosaiced, image_srgb = postprocessing(rawData, output_srgb = True, verbose = verbose)
+    image_demosaiced, image_srgb = postprocessing(rawData, output_srgb = True, verbose = verbose, debug = True)
 
     image_utils.save_image_16(outfn + "_srgb.tiff", image_srgb, verbose = verbose)
