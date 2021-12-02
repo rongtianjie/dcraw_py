@@ -71,7 +71,7 @@ def detection(image, verbose = False):
     if len(SWATCHES) == 1:
         return SWATCHES[0]
     else:
-        print("ERROR. Found multiple swatches.")
+        print("ERROR. Can't find or found multiple swatches.")
 
 def correction(image_lrgb, swatch, verbose = False):
     # the input image should be 16-bit sRGB
