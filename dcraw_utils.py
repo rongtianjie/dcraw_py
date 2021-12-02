@@ -28,6 +28,12 @@ d65_white = np.array([0.95047, 1, 1.08883])
 
 APPLY_BLC = True
 
+def CLIP(src):
+    rslt = src.copy()
+    rslt[rslt>65536] = 65535
+    rslt[rslt<0] = 0
+    return rslt
+
 def importRawImage(infPath):
     return rawpy.imread(infPath)
 
@@ -86,7 +92,7 @@ def subtract(raw, dark_img, fileList = None, verbose = False):
         print("The noise floor is {}\n".format(noise_floor))
 
     rslt = raw.raw_image_visible.astype(np.int32) - noise_floor
-    return image_utils.CLIP(rslt)
+    return CLIP(rslt)
 
 def blc(raw):
     # BLC on raw image pattern
@@ -100,7 +106,7 @@ def blc(raw):
     for i, bl in enumerate(raw.black_level_per_channel):
         rslt[raw.raw_colors_visible == i] -= bl
 
-    return image_utils.CLIP(rslt)
+    return CLIP(rslt)
 
 def scale_colors(src, raw, verbose = False):
     if APPLY_BLC:
@@ -133,12 +139,12 @@ def scale_colors(src, raw, verbose = False):
     for i, scale_co in  enumerate(scale_coeff):
         scale_matrix[raw.raw_colors_visible == i] = scale_co
     
-    rslt = src_blc * scale_matrix
+    rslt = CLIP(src_blc * scale_matrix)
     
     if verbose:
         print("White balance finished.\n")
 
-    return image_utils.CLIP(rslt.astype(np.int32))
+    return rslt
 
 
 def demosaicing(src, Bayer_Pattern, DEMOSACING_METHOD = 0, verbose = False):
@@ -189,7 +195,7 @@ def camera_to_srgb(src, raw, verbose = False):
     img_srgb = np.dot(src, rgb_cam.T)
     if verbose:
         print("Conversion done.\n")
-    return image_utils.CLIP(img_srgb.astype(np.int32))
+    return CLIP(img_srgb)
 
 if __name__ == "__main__":
     print("This is the dcraw utils script.")
