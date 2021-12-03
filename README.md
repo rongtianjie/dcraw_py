@@ -11,13 +11,13 @@
  Simply import the `dcraw` library in your Python script.
 
  ```
- dcraw.imread(infile, path = None, suffix = ".RAF", verbose = False)
+ rawData = dcraw.imread(infile, path = None, suffix = ".RAF", verbose = False)
  ``` 
  will return a `rawpy.RawPy` object. Almost the same as `rawpy.imread()`.
 
 The main ISP implementation is contained in 
  ```
- dcraw.postprocessing(rawData, path = None, suffix = ".RAF", adjust_maximum_thr = 0.75, dark_frame = None, bayer_pattern = "RGGB", demosacing_method = 0, verbose = False)
+ output = dcraw.postprocessing(rawData, path = None, suffix = ".RAF", adjust_maximum_thr = 0.75, dark_frame = None, bayer_pattern = "RGGB", demosacing_method = 0, verbose = False)
  ```
 
 #### Parameters
@@ -26,6 +26,16 @@ The main ISP implementation is contained in
     - if `path` is defined, the `infile` do not have to containe the whole file path. The script will automatically search all the files under `path` matches the `path` including the subfolders. If there are multiple files match the keyword, the script will launch a choosen selection prompt.
 
     - if `path` is not defined (default None), the `infile` should be the absolute path or relative path to the script.
+
+- *use_rawpy_postprocessing* (bool) - Whether use rawpy built-in postprocessing.
+
+    - Linear gamma output
+
+    - Do not auto bright image
+
+    - Output 16-bit image
+
+    - Use camera white balance setting
 
 - *path* (str) - The root path of all the image files. This parameter has 3 functions:
 

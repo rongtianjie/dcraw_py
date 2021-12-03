@@ -14,7 +14,11 @@ def imread(infile, path = None, suffix = ".RAF", verbose = False):
         rawData = dcraw_utils.importRawImage(infPath)
     return rawData
 
-def postprocessing(rawData, suffix = ".RAF", adjust_maximum_thr = 0.75, dark_frame = None, path = None, bayer_pattern = "RGGB", demosacing_method = 0, output_srgb = False, verbose = False, debug = False):
+def postprocessing(rawData, use_rawpy_postprocessing = False, suffix = ".RAF", adjust_maximum_thr = 0.75, dark_frame = None, path = None, bayer_pattern = "RGGB", demosacing_method = 0, output_srgb = False, verbose = False, debug = False):
+    
+    if use_rawpy_postprocessing:
+        return rawData.postprocess(gamma = (1, 1), no_auto_bright = True, output_bps = 16, use_camera_wb = True)
+
     if path == None:
         rawData_badfix = rawData
     else:

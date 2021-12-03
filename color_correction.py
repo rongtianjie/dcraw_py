@@ -78,16 +78,12 @@ def correction(image_lrgb, swatch, verbose = False):
     D65 = colour.CCS_ILLUMINANTS['CIE 1931 2 Degree Standard Observer']['D65']
     REFERENCE_COLOUR_CHECKER = CreateSpyderCheck()
 
-    if verbose:
-        print("CHECKER:")
-        print(REFERENCE_COLOUR_CHECKER)
-
     REFERENCE_SWATCHES = colour.XYZ_to_RGB(
         colour.xyY_to_XYZ(list(REFERENCE_COLOUR_CHECKER.data.values())),
         REFERENCE_COLOUR_CHECKER.illuminant, D65,
         colour.RGB_COLOURSPACES['sRGB'].matrix_XYZ_to_RGB)
     if verbose:
-        print(REFERENCE_SWATCHES)
+        # print(REFERENCE_SWATCHES)
         swatches_xyY = colour.XYZ_to_xyY(colour.RGB_to_XYZ(swatch, D65, D65, colour.RGB_COLOURSPACES['sRGB'].matrix_RGB_to_XYZ))
         colour_checker = colour.characterisation.ColourChecker(
             "src_image", 
