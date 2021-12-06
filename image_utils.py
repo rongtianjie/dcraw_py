@@ -76,24 +76,8 @@ def crop_image(src, top, bottom, left, right):
         print("Error: [crop_image] The input image must be in 2 or 3 dimensions.")
     return rslt
 
-def CLIP(src):
-    rslt = src.copy()
-    if rslt.dtype == "uint16" or rslt.dtype == "int32":
-        np.clip(rslt, 0, 65535)
-        return rslt.astype(np.uint16)
-    elif rslt.dtype == "uint8":
-        np.clip(rslt, 0, 255)
-        return rslt.astype(np.uint8)
-    elif rslt.dtype == "float32" or rslt.dtype == "float64":
-        np.clip(rslt, 0, 1)
-        return rslt
-    else:
-        c = input("Can't recognize the data type. \nPlease set the ceil valus manually: ")
-        np.clip(rslt, 0, c)
-        return rslt
-
 def rgb2gray(rgb):
-    gray = np.dot(rgb[...,:3], [0.299, 0.587, 0.114])
+    gray = np.dot(rgb[...,:3], [0.2989, 0.587, 0.114])
     gray[gray > 65536] = 65535
     return gray.astype(np.uint16)
 
