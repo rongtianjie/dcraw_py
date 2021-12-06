@@ -92,6 +92,11 @@ def CLIP(src):
         np.clip(rslt, 0, c)
         return rslt
 
+def rgb2gray(rgb):
+    gray = np.dot(rgb[...,:3], [0.299, 0.587, 0.114])
+    gray[gray > 65536] = 65535
+    return gray.astype(np.uint16)
+
 if __name__ == "__main__":
     print("This script contained several image basic operations.")
     exit(0)

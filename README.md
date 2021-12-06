@@ -64,6 +64,10 @@ The main ISP implementation is contained in
 - *output_srgb* (bool) - Whether output srgb color space. Default: False
     - If set to "True", the functurn will return 2 values [linear, srgb]
 
+- *auto_bright* (bool) - Whether bright the image automatically. Default: False
+
+- *bright_perc* (float) - If use auto bright, a brightest part of pixel will be set to pure white. The ratio is controled by `bright_prec` (Default: 0.01)
+
 - *verbose* (bool) - Whether showing the progress log.
 
 ## Reference

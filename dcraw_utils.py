@@ -3,6 +3,7 @@
 import numpy as np
 import rawpy
 import rawpy.enhance
+import colour
 import colour_demosaicing
 import random
 import image_utils
@@ -168,7 +169,7 @@ def demosaicing(src, Bayer_Pattern, DEMOSACING_METHOD = 0, verbose = False):
     if verbose:
         print("Demosacing finished.\n")
 
-    return rslt
+    return rslt.astype(np.uint16)
 
 def cam_rgb_coeff(cam_xyz):
     cam_xyz = cam_xyz[:3][:]
@@ -195,7 +196,37 @@ def camera_to_srgb(src, raw, verbose = False):
     img_srgb = np.dot(src, rgb_cam.T)
     if verbose:
         print("Conversion done.\n")
-    return CLIP(img_srgb)
+    return CLIP(img_srgb).astype(np.uint16)
+
+def auto_bright(image_srgb, perc = 0.01, verbose = False):
+    # Use percentile to auto bright image
+    
+    if verbose:
+        print("\nStart auto bright...")
+
+    white_num = int(image_srgb.shape[0] * image_srgb.shape[1] * perc)
+
+    gray = image_utils.rgb2gray(image_srgb)
+    
+    hist = np.bincount(gray.ravel(), minlength=65536)
+
+    cnt = 0
+    white = 0
+    for i in range(len(hist)):
+        cnt += hist[65535 - i]
+        if cnt > white_num:
+            white = 65535 - i
+            break
+
+    ratio = 65535 / white
+    if verbose:
+        print("Brighten ratio: {}".format(ratio))
+
+    image_bright = image_srgb * ratio
+
+    if verbose:
+        print("Auto bright finished.")
+    return CLIP(image_bright).astype(np.uint16)
 
 if __name__ == "__main__":
     print("This is the dcraw utils script.")

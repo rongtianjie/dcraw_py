@@ -14,8 +14,10 @@ def imread(infile, path = None, suffix = ".RAF", verbose = False):
         rawData = dcraw_utils.importRawImage(infPath)
     return rawData
 
-def postprocessing(rawData, use_rawpy_postprocessing = False, suffix = ".RAF", adjust_maximum_thr = 0.75, dark_frame = None, path = None, bayer_pattern = "RGGB", demosacing_method = 0, output_srgb = False, verbose = False, debug = False):
+def postprocessing(rawData, use_rawpy_postprocessing = False, suffix = ".RAF", adjust_maximum_thr = 0.75, dark_frame = None, path = None, bayer_pattern = "RGGB", demosacing_method = 0, output_srgb = False, auto_bright = False, bright_perc = 0.01, verbose = False):
     
+    debug = False
+
     if use_rawpy_postprocessing:
         return rawData.postprocess(gamma = (1, 1), no_auto_bright = True, output_bps = 16, use_camera_wb = True)
 
@@ -38,13 +40,16 @@ def postprocessing(rawData, use_rawpy_postprocessing = False, suffix = ".RAF", a
         image_utils.save_image_16("debug_demosaiced.tiff", image_demosaiced)
 
     if output_srgb:
-        image_srgb = dcraw_utils.camera_to_srgb(image_demosaiced, rawData_badfix, verbose)
+        output = dcraw_utils.camera_to_srgb(image_demosaiced, rawData_badfix, verbose)
         if debug:
-            image_utils.save_image_16("debug_srgb.tiff", image_srgb)
-
-        return image_demosaiced.astype(np.uint16), image_srgb.astype(np.uint16)
+            image_utils.save_image_16("debug_srgb.tiff", output)
     else:
-        return image_demosaiced.astype(np.uint16)
+        output = image_demosaiced
+
+    if auto_bright:
+        output = dcraw_utils.auto_bright(output, bright_perc, verbose)
+    
+    return output
 
 
         
