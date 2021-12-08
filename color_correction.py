@@ -107,6 +107,8 @@ def correction(image_lrgb, swatch, verbose = False):
 
     return cc_image
 
-
+if __name__ == "__main__":
+    print("This is the colour correction w/ colour checker script.")
+    exit(0)
 
 
