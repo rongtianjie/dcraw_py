@@ -6,7 +6,7 @@ from colour_checker_detection import detect_colour_checkers_segmentation
 
 class CreateSpyderCheck:
     name = "SpyderChecker 24"
-
+    # Color checker reference values are in xyY color space
     data = OrderedDict()
     data["Aqua"] = np.array([0.29131, 0.39533, 0.4102])
     data["Lavender"] = np.array([0.29860, 0.28411, 0.22334])
@@ -21,7 +21,7 @@ class CreateSpyderCheck:
     data["Apple Green"] = np.array([0.40262, 0.50567, 0.44332])
     data["Sunflower"] = np.array([0.50890, 0.43959, 0.4314])
     data["Primary Cyan"] = np.array([0.19792, 0.30072, 0.16111])
-    data["Primary Magenta"] = np.array([0.42785, 0.26565, .018832])
+    data["Primary Magenta"] = np.array([0.38429, 0.23929, 0.18286])
     data["Primary Yellow"] = np.array([0.47315, 0.47936, 0.63319])
     data["Primary Red"] = np.array([0.59685, 0.31919, 0.11896])
     data["Primary Green"] = np.array([0.32471, 0.51999, 0.22107])
@@ -35,12 +35,12 @@ class CreateSpyderCheck:
 
     illuminant = np.array([ 0.34570291,  0.3585386 ])
 
-def getColorCorrectionSwatches(image_lrgb, IMAGE_BLUR = True, verbose = False):
+def getColorCorrectionSwatches(image_lrgb, auto_shink = True, IMAGE_BLUR = True, verbose = False):
     # The input image should convert to linear RGB with colour.cctf_decoding()
-
-    if max(image_lrgb.shape[0], image_lrgb.shape[1]) > 1000:
-        ratio = 800 / max(image_lrgb.shape[0], image_lrgb.shape[1])
-        image_lrgb = cv2.resize(image_lrgb, (0, 0), fx = ratio, fy = ratio)
+    if auto_shink:
+        if max(image_lrgb.shape[0], image_lrgb.shape[1]) > 1500:
+            ratio = 1000 / max(image_lrgb.shape[0], image_lrgb.shape[1])
+            image_lrgb = cv2.resize(image_lrgb, (0, 0), fx = ratio, fy = ratio)
     if IMAGE_BLUR:
         image_blur = cv2.GaussianBlur(image_lrgb, (11, 11), 0)
     else:
@@ -73,10 +73,10 @@ def detection(image, verbose = False):
     else:
         print("ERROR. Can't find or found multiple swatches.")
 
-def correction(image_lrgb, swatch, verbose = False):
+def correction(image_lrgb, swatch, checker = CreateSpyderCheck(), verbose = False):
     # the input image should be 16-bit sRGB
     D65 = colour.CCS_ILLUMINANTS['CIE 1931 2 Degree Standard Observer']['D65']
-    REFERENCE_COLOUR_CHECKER = CreateSpyderCheck()
+    REFERENCE_COLOUR_CHECKER = checker
 
     REFERENCE_SWATCHES = colour.XYZ_to_RGB(
         colour.xyY_to_XYZ(list(REFERENCE_COLOUR_CHECKER.data.values())),

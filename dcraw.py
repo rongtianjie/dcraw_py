@@ -94,6 +94,6 @@ if __name__ == "__main__":
 
     rawData = imread(infn, path = path, verbose = verbose)
 
-    image_demosaiced, image_srgb = postprocessing(rawData, output_srgb = True, verbose = verbose, debug = True)
+    image_srgb = postprocessing(rawData, output_srgb = True, verbose = verbose, debug = True)
 
     image_utils.save_image_16(outfn + "_srgb.tiff", image_srgb, verbose = verbose)

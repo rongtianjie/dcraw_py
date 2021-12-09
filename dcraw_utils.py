@@ -172,6 +172,7 @@ def demosaicing(src, Bayer_Pattern, DEMOSACING_METHOD = 0, verbose = False):
     return rslt.astype(np.uint16)
 
 def cam_rgb_coeff(cam_xyz):
+    # cam_xyz is used to convert color space from XYZ to camera RGB
     cam_xyz = cam_xyz[:3][:]
     cam_rgb = np.dot(xyz_srgb, cam_xyz)
     # Normalize cam_rgb
