@@ -33,7 +33,19 @@ class CreateSpyderCheck:
     data["80% Gray"] = np.array([0.35181, 0.36307, 0.07794])
     data["Card Black"] = np.array([0.34808, 0.35030, 0.02284])
 
+    # CIE D65 XYZ
+    # From https://cdn-10.nikon-cdn.com/pdf/NS4_man.pdf
+    # illuminant = np.array([0.3127159, 0.3290015])
+
+    # CIE D50 XYZ
     illuminant = np.array([ 0.34570291,  0.3585386 ])
+
+def auto_bright(image_lrgb, dst_avg = 0.17, verbose = False):
+    ratio = 1
+    if image_lrgb.mean() < dst_avg:
+        ratio = dst_avg / image_lrgb.mean()
+        image_lrgb *= ratio
+    return image_lrgb, ratio
 
 def getColorCorrectionSwatches(image_lrgb, auto_shink = True, IMAGE_BLUR = True, verbose = False):
     # The input image should convert to linear RGB with colour.cctf_decoding()
