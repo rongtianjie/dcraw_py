@@ -14,19 +14,20 @@ def imread(infile, path = None, suffix = ".RAF", verbose = False):
         rawData = dcraw_utils.importRawImage(infPath)
     return rawData
 
-def postprocessing(rawData, use_rawpy_postprocessing = False, suffix = ".RAF", adjust_maximum_thr = 0.75, dark_frame = None, path = None, bayer_pattern = "RGGB", demosacing_method = 0, output_srgb = False, auto_bright = False, bright_perc = 0.01, verbose = False):
+def postprocessing(rawData, use_rawpy_postprocessing = False, suffix = ".RAF", adjust_maximum_thr = 0.75, dark_frame = None, path = None, bad_pixel_fix = True, bayer_pattern = "RGGB", demosacing_method = 0, output_srgb = False, auto_bright = False, bright_perc = 0.01, crop_to_official = True, verbose = False):
     
     debug = False
 
     if use_rawpy_postprocessing:
         return rawData.postprocess(gamma = (1, 1), no_auto_bright = True, output_bps = 16, use_camera_wb = True)
 
-    if path == None:
+    if path == None or bad_pixel_fix == False:
         rawData_badfix = rawData
     else:
         fileList = image_utils.FindAllSuffix(path, suffix, verbose)
         rawData_badfix = dcraw_utils.bad_fix(fileList, rawData, verbose)
-    dcraw_utils.adjust_maximum(rawData_badfix, adjust_maximum_thr)
+    
+    # dcraw_utils.adjust_maximum(rawData_badfix, adjust_maximum_thr)
 
     if dark_frame == None:
         rawImage_wb = dcraw_utils.scale_colors(None, rawData_badfix, verbose)
@@ -48,6 +49,9 @@ def postprocessing(rawData, use_rawpy_postprocessing = False, suffix = ".RAF", a
 
     if auto_bright:
         output = dcraw_utils.auto_bright(output, bright_perc, verbose)
+    
+    if crop_to_official:
+        output = dcraw_utils.crop_to_official_size(output, verbose = verbose)
     
     return output
 

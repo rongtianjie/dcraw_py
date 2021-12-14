@@ -24,8 +24,22 @@ maximum = 65535
 xyz_srgb = np.array([[0.4124564, 0.3575761, 0.1804375],
                     [0.2126729, 0.7151522, 0.0721750],
                     [0.0193339, 0.1191920, 0.9503041]])
-
+                    
+# From IEC 61966-2-1:1999
+# xyz_srgb = colour.models.RGB_COLOURSPACE_sRGB.RGB_to_XYZ_matrix
 d65_white = np.array([0.95047, 1, 1.08883])
+
+# Crop information
+# Used to crop the image from libraw size to official size
+
+# GFX100S official image size is 11648 x 8736 (libraw: 11662 x 8752)
+class Crop_DB:
+    def __init__(self, top_margin, bottom_margin, left_margin, right_margin):
+        self.top = top_margin
+        self.bottom = bottom_margin
+        self.left = left_margin
+        self.right = right_margin
+crop_GFX100S = Crop_DB(5, 11, 8, 6)
 
 APPLY_BLC = True
 
@@ -228,6 +242,13 @@ def auto_bright(image_srgb, perc = 0.01, verbose = False):
     if verbose:
         print("Auto bright finished.")
     return CLIP(image_bright).astype(np.uint16)
+
+def crop_to_official_size(img, model = "GFX100S", verbose = False):
+    if model == "GFX100S":
+        rslt = image_utils.crop_image(img, crop_GFX100S.top, crop_GFX100S.bottom, crop_GFX100S.left, crop_GFX100S.right)
+        if verbose:
+            print("Output image size is {} x {}".format(rslt.shape[1], rslt.shape[0]))
+        return rslt
 
 if __name__ == "__main__":
     print("This is the dcraw utils script.")
