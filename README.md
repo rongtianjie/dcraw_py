@@ -17,7 +17,7 @@
 
 The main ISP implementation is contained in 
  ```
- output = dcraw.postprocessing(rawData, path = None, suffix = ".RAF", adjust_maximum_thr = 0.75, dark_frame = None, bayer_pattern = "RGGB", demosacing_method = 0, verbose = False)
+ output = dcraw.postprocessing(rawData, use_rawpy_postprocessing = False, suffix = ".RAF", adjust_maximum_thr = 0.75, dark_frame = None, path = None, bad_pixel_fix = True, bayer_pattern = "RGGB", demosacing_method = 0, output_srgb = False, auto_bright = False, bright_perc = 0.01, crop_to_official = True, verbose = False)
  ```
 
 #### Parameters
@@ -37,7 +37,7 @@ The main ISP implementation is contained in
 
     - Use camera white balance setting
 
-- **path** (str) - The root path of all the image files. This parameter has 3 functions:
+- **path** (str) - The root path of all the image files. This parameter has 2 functions:
 
     - It can be used in the searching for the absolute file path, including the input image and dark frame.
 
@@ -48,6 +48,8 @@ The main ISP implementation is contained in
 - **adjust_maximum_thr** (float) - See libraw docs. [Here](https://www.libraw.org/docs/API-datastruct-eng.html#libraw_output_params_t)
 
 - **dark_frame** (str) - The dark frame filename. Used to remove the noise floor. Similar to `infile`, file path also can be auto generated with path defined.
+
+- **bad_pixel_fix** (bool) - Whether apply the bad pixel fix module. Requiring determining the `path` parameter.
 
 - **bayer_pattern** (str) - The bayer pattern of camera cmos.
     > The original cmos bayer pattern of Fujifilm GFX100S is "GBRG". However, it turns to "RGGB" after the raw image data is cropped by "_visible".
