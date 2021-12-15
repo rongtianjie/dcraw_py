@@ -1,9 +1,7 @@
-# All multiplication and division will be in dtype.float64
 
 import numpy as np
 import rawpy
 import rawpy.enhance
-import colour
 import colour_demosaicing
 import random
 import image_utils
@@ -24,7 +22,7 @@ maximum = 65535
 xyz_srgb = np.array([[0.4124564, 0.3575761, 0.1804375],
                     [0.2126729, 0.7151522, 0.0721750],
                     [0.0193339, 0.1191920, 0.9503041]])
-                    
+
 # From IEC 61966-2-1:1999
 # xyz_srgb = colour.models.RGB_COLOURSPACE_sRGB.RGB_to_XYZ_matrix
 d65_white = np.array([0.95047, 1, 1.08883])
@@ -149,7 +147,7 @@ def scale_colors(src, raw, verbose = False):
     scale_coeff = wb_coeff * 65535 / white_level
     print("Scale coefficient is {}".format(scale_coeff))
 
-    scale_matrix = np.empty(raw.raw_colors_visible.shape, dtype=np.float64)
+    scale_matrix = np.empty(raw.raw_colors_visible.shape, dtype=np.float32)
 
     for i, scale_co in  enumerate(scale_coeff):
         scale_matrix[raw.raw_colors_visible == i] = scale_co
