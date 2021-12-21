@@ -8,3 +8,4 @@
 playground.ipynb
 color_correction.ipynb
 dcraw_test.py
+*.png
