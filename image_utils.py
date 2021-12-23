@@ -3,9 +3,22 @@ import cv2
 import os
 import sys
 import imageio
+import colour
 
 def read_tiff(infn):
     return cv2.imread(infn, cv2.IMREAD_UNCHANGED)
+
+def imshow(img):
+    if img.dtype == "uint16":
+        scale = 65535
+    elif img.dtype == "uint8":
+        scale = 255
+    elif img.dtype == "float32" or img.dtype == "float64":
+        scale = 1
+    else:
+        print("Unknown data type.")
+        return 1
+    colour.plotting.plot_image(img/scale)
 
 def save_image_16(outfn, src, verbose = False):
     imageio.imsave(outfn, src.astype(np.uint16))
