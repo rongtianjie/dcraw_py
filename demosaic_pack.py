@@ -1,0 +1,337 @@
+import numpy as np
+
+from colour.utilities.array import vector_dot
+
+def fc(cfa, r, c):
+    return cfa[r&1, c&1]
+
+def amaze_denosaic_cpp(src, raw):
+
+    ts = 512
+    tsh = ts/2
+    winx = winy = 0
+    width = src.shape[1]
+    height = src.shape[0]
+    clip_pt = min(raw.daylight_whitebalance)
+
+    cfarray = raw.raw_pattern
+    if  fc(cfarray, 0, 0)== 1:
+        if fc(cfarray, 0, 1) == 0:
+            ex, ey = 1, 0
+        else:
+            ex, ey = 0, 1
+    else:
+        if fc(cfarray, 0, 0) == 0:
+            ex = ey = 0
+        else: 
+            ex = ey = 1
+
+    v1 = ts
+    v2 = 2 * ts
+    v3 = 3 * ts
+    p1 = -ts + 1
+    p2 = -2 * ts + 2
+    p3 = -3 * ts + 3
+    m1 = ts + 1 
+    m2 = 2 * ts + 2
+    m3 = 3 * ts + 3
+
+    eps, epssq = 1e-5, 1e-10
+    arthresh = 0.75
+
+    gaussodd = [0.14659727707323927, 0.103592713382435, 0.0732036125103057, 0.0365543548389495]
+    nyqthresh = 0.5
+    gaussgrad = [nyqthresh * 0.07384411893421103, nyqthresh * 0.06207511968171489, nyqthresh * 0.0521818194747806, nyqthresh * 0.03687419286733595, nyqthresh * 0.03099732204057846, nyqthresh * 0.018413194161458882]
+    gausseven = [0.13719494435797422, 0.05640252782101291]
+    gquinc = [0.169917, 0.108947, 0.069855, 0.0287182]
+
+    for top in range(winy-16, winy+height, ts-32):
+        for left in range(winx-16, winx+width, ts-32):
+            bottom = min(top+ts, winy+height+16)
+            right = min(left+ts, winx+width+16)
+            rr1 = bottom - top
+            cc1 = right - left
+            
+            rrmin = 16 if top < winy else 0
+            ccmin = 16 if left < winx else 0
+            rrmax = winy+height-top if bottom>(winy+height) else rr1
+            ccmax = winx+width-left if right>(winx+width) else cc1
+
+            rgbgreen = np.empty(ts*ts, dtype=np.float32)
+            cfa = np.empty(ts*ts, dtype=np.float32)
+            delhvsqsum = np.empty(ts*ts, dtype=np.float32)
+            dirwts0 = np.empty(ts*ts, dtype=np.float32)
+            dirwts1 = np.empty(ts*ts, dtype=np.float32)
+            vcd = np.empty(ts*ts, dtype=np.float32)
+            hcd = np.empty(ts*ts, dtype=np.float32)
+            vcdalt = np.empty(ts*ts, dtype=np.float32)
+            hcdalt = np.empty(ts*ts, dtype=np.float32)
+            dgintv = np.empty(ts*ts, dtype=np.float32)
+            dginth = np.empty(ts*ts, dtype=np.float32)
+            cddiffsq = np.empty(ts*ts, dtype=np.float32)
+            hvwt = np.empty(ts*ts, dtype=np.float32)
+            nyquist = np.empty(ts*ts, dtype=np.float32)
+            nyqutest = np.empty(ts*ts, dtype=np.float32)
+            
+            
+            # fill upper border
+            if rrmin > 0:
+                for rr in range(16):
+                    for cc in range(ccmin, ccmax):
+                        row = 32 - rr + top
+                        cfa[rr*ts+cc] = src[row, cc+left] / 65535
+                        rgbgreen[rr*ts+cc] = cfa[rr*ts+cc]
+
+            # fill inner part
+            for rr in range(rrmin, rrmax):
+                row = rr + top
+                for cc in range(ccmin, ccmax):
+                    indx1 = rr * ts + cc
+                    cfa[indx1] = src[row, cc+left] / 65535
+                    rgbgreen[indx1] = cfa[indx1]
+
+            # fill lower part
+            if rrmax < rr1:
+                for rr in range(16):
+                    for cc in range(ccmin, ccmax):
+                        cfa[(rrmax+rr)*ts+cc] = src[winy+height-rr-2, left+cc] / 65535
+                        rgbgreen[(rrmax+rr)*ts+cc] = cfa[(rrmax+rr)*ts+cc]
+            
+            # fill left border
+            if ccmin > 0:
+                for rr in range(rrmin, rrmax):
+                    for cc in range(16):
+                        cfa[rr*ts+cc] = src[raw, 32-cc+left] / 65535
+                        rgbgreen[rr*ts+cc] = cfa[rr*ts+cc]
+            
+            # fill right border
+            if ccmax < cc1:
+                for rr in range(rrmin, rrmax):
+                    for cc in range(16):
+                        cfa[rr*ts+ccmax+cc] = src[top+rr, winx+width-cc-2] / 65535
+                        rgbgreen[rr*ts+ccmax+cc] = cfa[rr*ts+ccmax+cc]
+
+            # fill the image corners
+            if rrmin > 0 and ccmin > 0:
+                for rr in range(16):
+                    for cc in range(16):
+                        cfa[rr*ts+cc] = src[winy+32-rr, winx+32-cc] / 65535
+                        rgbgreen[rr*ts+cc] = cfa[rr*ts+cc]
+            
+            if rrmax < rr1 and ccmax < cc1:
+                for rr in range(16):
+                    for cc in range(16):
+                        cfa[(rrmax+rr)*ts+ccmax+cc] = src[winy+height-rr-2, winx+width-cc-2] / 65535
+                        rgbgreen[(rrmax+rr)*ts+ccmax+cc] = cfa[(rrmax+rr)*ts+ccmax+cc]
+            
+            if rrmin > 0 and ccmax < cc1:
+                for rr in range(16):
+                    for cc in range(16):
+                        cfa[rr*ts+ccmax+cc] = src[winy+32-rr, winx+width-cc-2] / 65535
+                        rgbgreen[rr*ts+ccmax+cc] = cfa[rr*ts+ccmax+cc]
+
+            if rrmax < rr1 and ccmin > 0:
+                for rr in range(16):
+                    for cc in range(16):
+                        cfa[(rrmax+rr)*ts+cc] = src[winy+height-rr-2, winx+32-cc] / 65535
+                        rgbgreen[(rrmax+rr)*ts+cc] = cfa[(rrmax+rr)*ts+cc]
+            
+            for rr in range(2, rr1-2):
+                for cc in range(2, cc1-2):
+                    indx = rr*ts+cc
+                    delh = abs(cfa[indx + 1] - cfa[indx - 1])
+                    delv = abs(cfa[indx + v1] - cfa[indx - v1])
+                    dirwts0[indx] = eps + abs(cfa[indx + v2] - cfa[indx]) + abs(cfa[indx] - cfa[indx - v2]) + delv
+                    dirwts1[indx] = eps + abs(cfa[indx + 2] - cfa[indx]) + abs(cfa[indx] - cfa[indx - 2]) + delh
+                    delhvsqsum[indx] = delh ** 2 + delv ** 2
+            del indx
+
+            for rr in range(4, rr1-4):
+                fcswitch = fc(cfarray, rr, 4) & 1
+
+                for cc in range(4, cc1-4):
+                    indx = rr*ts+cc
+
+                    # colour ratios in each cardinal direction
+                    cru = cfa[indx - v1] * (dirwts0[indx - v2] + dirwts0[indx]) / (dirwts0[indx - v2] * (eps + cfa[indx]) + dirwts0[indx] * (eps + cfa[indx - v2]))
+                    crd = cfa[indx + v1] * (dirwts0[indx + v2] + dirwts0[indx]) / (dirwts0[indx + v2] * (eps + cfa[indx]) + dirwts0[indx] * (eps + cfa[indx + v2]))
+                    crl = cfa[indx - 1] * (dirwts1[indx - 2] + dirwts1[indx]) / (dirwts1[indx - 2] * (eps + cfa[indx]) + dirwts1[indx] * (eps + cfa[indx - 2]))
+                    crr = cfa[indx + 1] * (dirwts1[indx + 2] + dirwts1[indx]) / (dirwts1[indx + 2] * (eps + cfa[indx]) + dirwts1[indx] * (eps + cfa[indx + 2]))
+
+                    # G interpolated in vert/hor directions using Hamilton-Adams method
+                    guha = min(clip_pt, cfa[indx - v1] + 0.5 * (cfa[indx] - cfa[indx - v2]))
+                    gdha = min(clip_pt, cfa[indx + v1] + 0.5 * (cfa[indx] - cfa[indx + v2]))
+                    glha = min(clip_pt, cfa[indx - 1] + 0.5 * (cfa[indx] - cfa[indx - 2]))
+                    grha = min(clip_pt, cfa[indx + 1] + 0.5 * (cfa[indx] - cfa[indx + 2]))
+
+                    # G interpolated in vert/hor directions using adaptive ratios
+                    guar = cfa[indx] * cru if abs(1-cru) < arthresh else guha
+                    gdar = cfa[indx] * crd if abs(1-crd) < arthresh else gdha
+                    glar = cfa[indx] * crl if abs(1-crl) < arthresh else glha
+                    grar = cfa[indx] * crr if abs(1-crr) < arthresh else grha
+                    
+                    # adaptive weights for vertical/horizontal directions
+                    hwt = dirwts1[indx - 1] / (dirwts1[indx - 1] + dirwts1[indx + 1])
+                    vwt = dirwts0[indx - v1] / (dirwts0[indx + v1] + dirwts0[indx - v1])
+
+                    # interpolated G via adaptive weights of cardinal evaluations
+                    Gintvha = vwt * gdha + (1 - vwt) * guha
+                    Ginthha = hwt * grha + (1 - hwt) * glha
+
+                    # interpolated colour differences
+                    if fcswitch:
+                        vcd[indx] = cfa[indx] - (vwt * gdar + (1 - vwt) * guar)
+                        hcd[indx] = cfa[indx] - (hwt * grar + (1 - hwt) * glar)
+                        vcdalt[indx] = cfa[indx] - Gintvha
+                        hcdalt[indx] = cfa[indx] - Ginthha
+                    else:
+                        vcd[indx] = (vwt * gdar + (1 - vwt) * guar) - cfa[indx]
+                        hcd[indx] = (hwt * grar + (1 - hwt) * glar) - cfa[indx]
+                        vcdalt[indx] = Gintvha - cfa[indx]
+                        hcdalt[indx] = Ginthha - cfa[indx]
+                    
+                    fcswitch = 1 - fcswitch
+
+                    if cfa[indx] > 0.8 * clip_pt or Gintvha > 0.8 * clip_pt or Ginthha > 0.8 * clip_pt:
+                        # use HA if highlights are (nearly) clipped
+                        guar = guha
+                        gdar = gdha
+                        glar = glha
+                        grar = grha
+                        vcd[indx] = vcdalt[indx]
+                        hcd[indx] = hcdalt[indx]
+                    
+                    # differences of interpolations in opposite directions
+                    dgintv[indx] = min((guha - gdha) ** 2, (guar - gdar) ** 2)
+                    dginth[indx] = min((glha - grha) ** 2, (glar - grar) ** 2)
+            
+            del indx
+
+
+            for rr in range(4, rr1-4):
+                for cc in range(4, cc1-4):
+                    indx = rr*ts+cc
+                    c = fc(cfarray, rr, cc) & 1
+                    hcdvar = 3 * (hcd[indx - 2]**2 + hcd[indx]**2 + hcd[indx + 2]**2) - (hcd[indx - 2] + hcd[indx] + hcd[indx + 2])**2
+                    hcdaltvar = 3 * (hcdalt[indx - 2]**2 + hcdalt[indx]**2 + hcdalt[indx + 2]**2) - (hcdalt[indx - 2] + hcdalt[indx] + hcdalt[indx + 2])**2
+                    vcdvar = 3 * (vcd[indx - v2]**2 + vcd[indx]**2 + vcd[indx + v2]**2) - (vcd[indx - v2] + vcd[indx] + vcd[indx + v2])**2
+                    vcdaltvar = 3 * (vcdalt[indx - v2]**2 + vcdalt[indx]**2 + vcdalt[indx + v2]**2) - (vcdalt[indx - v2] + vcdalt[indx] + vcdalt[indx + v2])**2
+
+                    # choose the smallest variance; this yields a smoother interpolation
+                    if hcdaltvar < hcdvar:
+                        hcd[indx] = hcdalt[indx]
+                    if vcdaltvar < vcdvar:
+                        vcd[indx] = vcdalt[indx]
+
+                    # bound the interpolation in regions of high saturation
+                    # vertical and horizontal G interpolations
+                    if c:
+                        Ginth = -hcd[indx] + cfa[indx]
+                        Gintv = -vcd[indx] + cfa[indx]
+
+                        if hcd[indx] > 0:
+                            if 3 * hcd[indx] > (Ginth + cfa[indx]):
+                                hcd[indx] = -np.median(Ginth, cfa[indx - 1], cfa[indx + 1]) + cfa[indx]
+                            else:
+                                hwt = 1 - 3 * hcd[indx] / (eps + Ginth + cfa[indx])
+                                hcd[indx] = hwt * hcd[indx] + (1 - hwt) * (-np.median(Ginth, cfa[indx - 1], cfa[indx + 1]) + cfa[indx])
+
+                        if vcd[indx] > 0:
+                            if 3 * vcd[indx] > (Gintv + cfa[indx]):
+                                vcd[indx] = -np.median(Gintv, cfa[indx - v1], cfa[indx + v1]) + cfa[indx]
+                            else:
+                                vwt = 1 - 3 * vcd[indx] / (eps + Gintv + cfa[indx])
+                                vcd[indx] = vwt * vcd[indx] + (1 - vwt) * (-np.median(Gintv, cfa[indx - v1], cfa[indx + v1]) + cfa[indx])
+                        
+                        if Ginth > clip_pt:
+                            hcd[indx] = -np.median(Ginth, cfa[indx - 1], cfa[indx + 1]) + cfa[indx]
+
+                        if Gintv > clip_pt:
+                            vcd[indx] = -np.median(Gintv, cfa[indx - v1], cfa[indx + v1]) + cfa[indx]
+                    
+                    else:
+                        Ginth = hcd[indx] + cfa[indx]
+                        Gintv = vcd[indx] + cfa[indx]
+
+                        if hcd[indx] < 0:
+                            if 3 * hcd[indx] < -(Ginth + cfa[indx]):
+                                hcd[indx] = np.median(Ginth, cfa[indx - 1], cfa[indx + 1]) - cfa[indx]
+                            else:
+                                hwt = 1 + 3 * hcd[indx] / (eps + Ginth + cfa[indx])
+                                hcd[indx] = hwt * hcd[indx] + (1 - hwt) * (np.median(Ginth, cfa[indx - 1], cfa[indx + 1]) - cfa[indx])
+
+                        if vcd[indx] < 0:
+                            if 3 * vcd[indx] < -(Gintv + cfa[indx]):
+                                vcd[indx] = np.median(Gintv, cfa[indx - v1], cfa[indx + v1]) - cfa[indx]
+                            else:
+                                vwt = 1 + 3 * vcd[indx] / (eps + Gintv + cfa[indx])
+                                vcd[indx] = vwt * vcd[indx] + (1 - vwt) * (np.median(Gintv, cfa[indx - v1], cfa[indx + v1]) - cfa[indx])
+
+                        if Ginth > clip_pt:
+                            hcd[indx] = np.median(Ginth, cfa[indx - 1], cfa[indx + 1]) - cfa[indx]
+
+                        if Gintv > clip_pt:
+                            vcd[indx] = np.median(Gintv, cfa[indx - v1], cfa[indx + v1]) - cfa[indx]
+
+                        cddiffsq[indx] = (vcd[indx] - hcd[indx])**2
+
+                    c = 1- c
+
+            for rr in range(6, rr1-6):
+                for cc in range(6+(fc(cfarray, rr, 2) & 1), cc1-6, 2):
+                    indx = rr * ts + cc
+
+                    # compute colour difference variances in cardinal directions
+                    uave = vcd[indx] + vcd[indx - v1] + vcd[indx - v2] + vcd[indx - v3]
+                    dave = vcd[indx] + vcd[indx + v1] + vcd[indx + v2] + vcd[indx + v3]
+                    lave = hcd[indx] + hcd[indx - 1] + hcd[indx - 2] + hcd[indx - 3]
+                    rave = hcd[indx] + hcd[indx + 1] + hcd[indx + 2] + hcd[indx + 3]
+
+                    # colour difference (G-R or G-B) variance in up/down/left/right directions
+                    Dgrbvvaru = (vcd[indx] - uave)**2 + (vcd[indx - v1] - uave)**2 + (vcd[indx - v2] - uave)**2 + (vcd[indx - v3] - uave)**2
+                    Dgrbvvard = (vcd[indx] - dave)**2 + (vcd[indx + v1] - dave)**2 + (vcd[indx + v2] - dave)**2 + (vcd[indx + v3] - dave)**2
+                    Dgrbhvarl = (hcd[indx] - lave)**2 + (hcd[indx - 1] - lave)**2 + (hcd[indx - 2] - lave)**2 + (hcd[indx - 3] - lave)**2
+                    Dgrbhvarr = (hcd[indx] - rave)**2 + (hcd[indx + 1] - rave)**2 + (hcd[indx + 2] - rave)**2 + (hcd[indx + 3] - rave)**2
+
+                    hwt = dirwts1[indx - 1] / (dirwts1[indx - 1] + dirwts1[indx + 1])
+                    vwt = dirwts0[indx - v1] / (dirwts0[indx + v1] + dirwts0[indx - v1])
+
+                    vcdvar = epssq + vwt * Dgrbvvard + (1 - vwt) * Dgrbvvaru
+                    hcdvar = epssq + hwt * Dgrbhvarr + (1 - hwt) * Dgrbhvarl
+
+                    # compute fluctuations in up/down and left/right interpolations of colours
+                    Dgrbvvaru = (dgintv[indx]) + (dgintv[indx - v1]) + (dgintv[indx - v2])
+                    Dgrbvvard = (dgintv[indx]) + (dgintv[indx + v1]) + (dgintv[indx + v2])
+                    Dgrbhvarl = (dginth[indx]) + (dginth[indx - 1]) + (dginth[indx - 2])
+                    Dgrbhvarr = (dginth[indx]) + (dginth[indx + 1]) + (dginth[indx + 2])
+
+                    vcdvar1 = epssq + vwt * Dgrbvvard + (1 - vwt) * Dgrbvvaru
+                    hcdvar1 = epssq + hwt * Dgrbhvarr + (1 - hwt) * Dgrbhvarl
+
+                    # determine adaptive weights for G interpolation
+                    varwt = hcdvar / (vcdvar + hcdvar)
+                    diffwt = hcdvar1 / (vcdvar1 + hcdvar1)
+
+                    # if both agree on interpolation direction, choose the one with strongest directional discrimination;
+                    # otherwise, choose the u/d and l/r difference fluctuation weights
+                    if ((0.5 - varwt) * (0.5 - diffwt) > 0) and (abs(0.5 - diffwt) < abs(0.5 - varwt)):
+                        hvwt[indx >> 1] = varwt
+                    else:
+                        hvwt[indx >> 1] = diffwt
+
+            for rr in range(6, rr1-6):
+                for cc in range(6 + (fc(cfarray, rr, 2) & 1), cc1 - 6, 2):
+                    indx = rr * ts + cc
+                    nyqutest[indx >> 1] = (gaussodd[0] * cddiffsq[indx] + gaussodd[1] * (cddiffsq[(indx - m1)] + cddiffsq[(indx + p1)] + cddiffsq[(indx - p1)] + cddiffsq[(indx + m1)]) + gaussodd[2] * (cddiffsq[(indx - v2)] + cddiffsq[(indx - 2)] + cddiffsq[(indx + 2)] + cddiffsq[(indx + v2)]) + gaussodd[3] * (cddiffsq[(indx - m2)] + cddiffsq[(indx + p2)] + cddiffsq[(indx - p2)] + cddiffsq[(indx + m2)])) - (gaussgrad[0] *  delhvsqsum[indx] + gaussgrad[1] * (delhvsqsum[indx - v1] + delhvsqsum[indx + 1] + delhvsqsum[indx - 1] + delhvsqsum[indx + v1]) + gaussgrad[2] * (delhvsqsum[indx - m1] + delhvsqsum[indx + p1] + delhvsqsum[indx - p1] + delhvsqsum[indx + m1]) + gaussgrad[3] * (delhvsqsum[indx - v2] + delhvsqsum[indx - 2] + delhvsqsum[indx + 2] + delhvsqsum[indx + v2]) + gaussgrad[4] * (delhvsqsum[indx - v2 - 1] + delhvsqsum[indx - v2 + 1] + delhvsqsum[indx - ts - 2] + delhvsqsum[indx - ts + 2] + delhvsqsum[indx + ts - 2] + delhvsqsum[indx + ts + 2] + delhvsqsum[indx + v2 - 1] + delhvsqsum[indx + v2 + 1]) + gaussgrad[5] * (delhvsqsum[indx - m2] + delhvsqsum[indx + p2] + delhvsqsum[indx - p2] + delhvsqsum[indx + m2]))
+            
+            # Nyquist test
+            nystartrow = 0
+            nyendrow = 0
+            nystartcol = ts + 1
+            nyendcol = 0
+
+            
+
+
+                    
+

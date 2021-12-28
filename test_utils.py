@@ -5,6 +5,7 @@ from matplotlib import pyplot as plt
 import math
 import sys
 import dcraw_utils
+import image_utils
 
 def image_hist(image):
     # 3-channel RGB image
@@ -99,7 +100,8 @@ if __name__ == "__main__":
     if infn == "":
         infn = sys.argv[1]
 
-    fileList = dcraw_utils.FindAllSuffix(sys.path[0], suffix)
-    rawData, __ = dcraw_utils.importRawImage(infn, fileList, suffix)
+    fileList = image_utils.FindAllSuffix(sys.path[0]+"/images", suffix)
+    infPath = image_utils.findRawImage(infn, fileList, suffix)
+    rawData = dcraw_utils.importRawImage(infPath)
 
     raw_info(rawData)
