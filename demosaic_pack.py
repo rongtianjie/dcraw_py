@@ -330,6 +330,60 @@ def amaze_denosaic_cpp(src, raw):
             nystartcol = ts + 1
             nyendcol = 0
 
+            for rr in range(6, rr1-6):
+                for cc in range(6 + (fc(cfarray, rr, 2) & 1), cc1 - 6, 2):
+                    indx = rr * ts + cc
+                    # nyquist texture test: ask if difference of vcd compared to hcd is larger or smaller than RGGB gradients
+                    if nyqutest[indx >> 1] > 0:
+                        nyquist[indx >> 1] = 1;    # nyquist=1 for nyquist region
+                        nystartrow = nystartrow if nystartrow else rr
+                        nyendrow = rr
+                        nystartcol = cc if nystartcol > cc else nystartcol
+                        nyendcol = cc if nyendcol < cc else nyendcol
+
+            doNyquist = (nystartrow != nyendrow) and (nystartcol != nyendcol)
+
+            if doNyquist:
+                nyendrow += 1
+                nyendcol += 1
+                nystartcol -= (nystartcol & 1)
+                nystartrow = max(8, nystartrow)
+                nyendrow = min(rr1 - 8, nyendrow)
+                nystartcol = max(8, nystartcol)
+                nyendcol = min(cc1 - 8, nyendcol)
+                nyquist2 = np.empty((ts-8)*tsh, dtype=np.float32)
+
+                for rr in range(nystartrow, nyendrow):
+                    for indx in range(rr*ts+nystartcol+(fc(cfarray, rr, 2)&1), rr*ts+nyendcol, 2):
+                        nyquisttemp = (nyquist[(indx - v2) >> 1] + nyquist[(indx - m1) >> 1] + nyquist[(indx + p1) >> 1] + nyquist[(indx - 2) >> 1] + nyquist[(indx + 2) >> 1] + nyquist[(indx - p1) >> 1] + nyquist[(indx + m1) >> 1] + nyquist[(indx + v2) >> 1])
+                        # if most of your neighbours are named Nyquist, it's likely that you're one too, or not
+                        nyquist2[indx >> 1] = 1 if nyquisttemp > 4 else (0 if nyquisttemp < 4 else nyquist[indx >> 1])
+                
+                # end of Nyquist test
+
+                # in areas of Nyquist texture, do area interpolation
+
+                for rr in range(nystartrow, nyendrow):
+                    for indx in ange(rr*ts+nystartcol+(fc(cfarray, rr, 2)&1), rr*ts+nyendcol, 2):
+                        if nyquist2[indx >> 1]:
+                            # area interpolation
+                            sumcfa = sumh = sumv = sumsqh = sumsqv = areawt = 0
+
+                            for i in range(-6, 7, 2):
+                                for j in range(-6, 7, 2):
+                                    indx1 = indx + (i * ts) + j
+                                    if nyquist2[indx1 >> 1]:
+                                        cfatemp = cfa[indx1]
+                                        sumcfa += cfatemp
+                                        sumh += (cfa[indx1 - 1] + cfa[indx1 + 1])
+                                        sumv += (cfa[indx1 - v1] + cfa[indx1 + v1]);
+                                        sumsqh += (cfatemp - cfa[indx1 - 1])**2 + (cfatemp - cfa[indx1 + 1])**2
+                                        sumsqv += (cfatemp - cfa[indx1 - v1])**2 + (cfatemp - cfa[indx1 + v1])**2
+                                        areawt += 1
+
+                            
+                    
+
             
 
 
