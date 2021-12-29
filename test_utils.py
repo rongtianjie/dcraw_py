@@ -93,6 +93,12 @@ def raw_info(raw):
     print("max()")
     print(raw.raw_image.max())
 
+    print("sizes")
+    print(raw.sizes)
+
+    print("sizes1")
+    print(raw.raw_image_visible.shape)
+
 if __name__ == "__main__":
     infn = "DSCF3396.RAF"
     suffix = ".RAF"

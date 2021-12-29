@@ -1,5 +1,5 @@
 import numpy as np
-
+from numba import jit
 from colour.utilities.array import vector_dot
 
 def fc(cfa, r, c):
@@ -8,17 +8,20 @@ def fc(cfa, r, c):
 def intp(a, b, c):
     return a * (b - c) + c
 
-def amaze_denosaic_cpp(src, raw):
+def amaze_denosaic(src, raw):
+    return amaze_denosaic_cpp(src, raw.raw_pattern, raw.daylight_whitebalance)
+
+@jit(nopython=True)
+def amaze_denosaic_cpp(src, cfarray, daylight_wb):
 
     ts = 512
-    tsh = ts/2
+    tsh = int(ts/2)
     winx = winy = 0
     width = src.shape[1]
     height = src.shape[0]
-    clip_pt = min(raw.daylight_whitebalance)
+    clip_pt = min(daylight_wb[:3])
 
-    cfarray = raw.raw_pattern
-    if  fc(cfarray, 0, 0)== 1:
+    if fc(cfarray, 0, 0)== 1:
         if fc(cfarray, 0, 1) == 0:
             ex, ey = 1, 0
         else:
@@ -47,9 +50,13 @@ def amaze_denosaic_cpp(src, raw):
     gaussgrad = [nyqthresh * 0.07384411893421103, nyqthresh * 0.06207511968171489, nyqthresh * 0.0521818194747806, nyqthresh * 0.03687419286733595, nyqthresh * 0.03099732204057846, nyqthresh * 0.018413194161458882]
     gausseven = [0.13719494435797422, 0.05640252782101291]
     gquinc = [0.169917, 0.108947, 0.069855, 0.0287182]
+    
+    loop_cnt = 1
 
     for top in range(winy-16, winy+height, ts-32):
         for left in range(winx-16, winx+width, ts-32):
+            print("Loop [{}]".format(loop_cnt))
+            loop_cnt += 1
             bottom = min(top+ts, winy+height+16)
             right = min(left+ts, winx+width+16)
             rr1 = bottom - top
@@ -116,7 +123,7 @@ def amaze_denosaic_cpp(src, raw):
             if ccmin > 0:
                 for rr in range(rrmin, rrmax):
                     for cc in range(16):
-                        cfa[rr*ts+cc] = src[raw, 32-cc+left] / 65535
+                        cfa[rr*ts+cc] = src[row, 32-cc+left] / 65535
                         rgbgreen[rr*ts+cc] = cfa[rr*ts+cc]
             
             # fill right border
@@ -159,7 +166,6 @@ def amaze_denosaic_cpp(src, raw):
                     dirwts0[indx] = eps + abs(cfa[indx + v2] - cfa[indx]) + abs(cfa[indx] - cfa[indx - v2]) + delv
                     dirwts1[indx] = eps + abs(cfa[indx + 2] - cfa[indx]) + abs(cfa[indx] - cfa[indx - 2]) + delh
                     delhvsqsum[indx] = delh ** 2 + delv ** 2
-            del indx
 
             for rr in range(4, rr1-4):
                 fcswitch = fc(cfarray, rr, 4) & 1
@@ -219,8 +225,6 @@ def amaze_denosaic_cpp(src, raw):
                     # differences of interpolations in opposite directions
                     dgintv[indx] = min((guha - gdha) ** 2, (guar - gdar) ** 2)
                     dginth[indx] = min((glha - grha) ** 2, (glar - grar) ** 2)
-            
-            del indx
 
 
             for rr in range(4, rr1-4):
@@ -246,23 +250,23 @@ def amaze_denosaic_cpp(src, raw):
 
                         if hcd[indx] > 0:
                             if 3 * hcd[indx] > (Ginth + cfa[indx]):
-                                hcd[indx] = -np.median(Ginth, cfa[indx - 1], cfa[indx + 1]) + cfa[indx]
+                                hcd[indx] = -np.median([Ginth, cfa[indx - 1], cfa[indx + 1]]) + cfa[indx]
                             else:
                                 hwt = 1 - 3 * hcd[indx] / (eps + Ginth + cfa[indx])
-                                hcd[indx] = hwt * hcd[indx] + (1 - hwt) * (-np.median(Ginth, cfa[indx - 1], cfa[indx + 1]) + cfa[indx])
+                                hcd[indx] = hwt * hcd[indx] + (1 - hwt) * (-np.median([Ginth, cfa[indx - 1], cfa[indx + 1]]) + cfa[indx])
 
                         if vcd[indx] > 0:
                             if 3 * vcd[indx] > (Gintv + cfa[indx]):
-                                vcd[indx] = -np.median(Gintv, cfa[indx - v1], cfa[indx + v1]) + cfa[indx]
+                                vcd[indx] = -np.median([Gintv, cfa[indx - v1], cfa[indx + v1]]) + cfa[indx]
                             else:
                                 vwt = 1 - 3 * vcd[indx] / (eps + Gintv + cfa[indx])
-                                vcd[indx] = vwt * vcd[indx] + (1 - vwt) * (-np.median(Gintv, cfa[indx - v1], cfa[indx + v1]) + cfa[indx])
+                                vcd[indx] = vwt * vcd[indx] + (1 - vwt) * (-np.median([Gintv, cfa[indx - v1], cfa[indx + v1]]) + cfa[indx])
                         
                         if Ginth > clip_pt:
-                            hcd[indx] = -np.median(Ginth, cfa[indx - 1], cfa[indx + 1]) + cfa[indx]
+                            hcd[indx] = -np.median([Ginth, cfa[indx - 1], cfa[indx + 1]]) + cfa[indx]
 
                         if Gintv > clip_pt:
-                            vcd[indx] = -np.median(Gintv, cfa[indx - v1], cfa[indx + v1]) + cfa[indx]
+                            vcd[indx] = -np.median([Gintv, cfa[indx - v1], cfa[indx + v1]]) + cfa[indx]
                     
                     else:
                         Ginth = hcd[indx] + cfa[indx]
@@ -270,23 +274,23 @@ def amaze_denosaic_cpp(src, raw):
 
                         if hcd[indx] < 0:
                             if 3 * hcd[indx] < -(Ginth + cfa[indx]):
-                                hcd[indx] = np.median(Ginth, cfa[indx - 1], cfa[indx + 1]) - cfa[indx]
+                                hcd[indx] = np.median([Ginth, cfa[indx - 1], cfa[indx + 1]]) - cfa[indx]
                             else:
                                 hwt = 1 + 3 * hcd[indx] / (eps + Ginth + cfa[indx])
-                                hcd[indx] = hwt * hcd[indx] + (1 - hwt) * (np.median(Ginth, cfa[indx - 1], cfa[indx + 1]) - cfa[indx])
+                                hcd[indx] = hwt * hcd[indx] + (1 - hwt) * (np.median([Ginth, cfa[indx - 1], cfa[indx + 1]]) - cfa[indx])
 
                         if vcd[indx] < 0:
                             if 3 * vcd[indx] < -(Gintv + cfa[indx]):
-                                vcd[indx] = np.median(Gintv, cfa[indx - v1], cfa[indx + v1]) - cfa[indx]
+                                vcd[indx] = np.median([Gintv, cfa[indx - v1], cfa[indx + v1]]) - cfa[indx]
                             else:
                                 vwt = 1 + 3 * vcd[indx] / (eps + Gintv + cfa[indx])
-                                vcd[indx] = vwt * vcd[indx] + (1 - vwt) * (np.median(Gintv, cfa[indx - v1], cfa[indx + v1]) - cfa[indx])
+                                vcd[indx] = vwt * vcd[indx] + (1 - vwt) * (np.median([Gintv, cfa[indx - v1], cfa[indx + v1]]) - cfa[indx])
 
                         if Ginth > clip_pt:
-                            hcd[indx] = np.median(Ginth, cfa[indx - 1], cfa[indx + 1]) - cfa[indx]
+                            hcd[indx] = np.median([Ginth, cfa[indx - 1], cfa[indx + 1]]) - cfa[indx]
 
                         if Gintv > clip_pt:
-                            vcd[indx] = np.median(Gintv, cfa[indx - v1], cfa[indx + v1]) - cfa[indx]
+                            vcd[indx] = np.median([Gintv, cfa[indx - v1], cfa[indx + v1]]) - cfa[indx]
 
                         cddiffsq[indx] = (vcd[indx] - hcd[indx])**2
 
@@ -366,7 +370,7 @@ def amaze_denosaic_cpp(src, raw):
                 nyendrow = min(rr1 - 8, nyendrow)
                 nystartcol = max(8, nystartcol)
                 nyendcol = min(cc1 - 8, nyendcol)
-                nyquist2 = np.empty((ts-8)*tsh, dtype=np.float32)
+                nyquist2 = np.zeros(ts*ts, dtype=np.int16)
 
                 for rr in range(nystartrow, nyendrow):
                     for indx in range(rr*ts+nystartcol+(fc(cfarray, rr, 2)&1), rr*ts+nyendcol, 2):
@@ -379,7 +383,7 @@ def amaze_denosaic_cpp(src, raw):
                 # in areas of Nyquist texture, do area interpolation
 
                 for rr in range(nystartrow, nyendrow):
-                    for indx in range(rr*ts+nystartcol+(fc(cfarray, rr, 2)&1), rr*ts+nyendcol, 2):
+                    for indx in range(rr * ts + nystartcol + (fc(cfarray, rr, 2)&1), rr * ts + nyendcol, 2):
                         if nyquist2[indx >> 1]:
                             # area interpolation
                             sumcfa = sumh = sumv = sumsqh = sumsqv = areawt = 0
@@ -433,7 +437,7 @@ def amaze_denosaic_cpp(src, raw):
                         if nyquist2[indx >> 1]:
                             # local averages (over Nyquist pixels only) of G curvature squared
                             gvarh = epssq + (gquinc[0] * Dgrbh2[indx >> 1] + gquinc[1] * (Dgrbh2[(indx - m1) >> 1] + Dgrbh2[(indx + p1) >> 1] + Dgrbh2[(indx - p1) >> 1] + Dgrbh2[(indx + m1) >> 1]) + gquinc[2] * (Dgrbh2[(indx - v2) >> 1] + Dgrbh2[(indx - 2) >> 1] + Dgrbh2[(indx + 2) >> 1] + Dgrbh2[(indx + v2) >> 1]) + gquinc[3] * (Dgrbh2[(indx - m2) >> 1] + Dgrbh2[(indx + p2) >> 1] + Dgrbh2[(indx - p2) >> 1] + Dgrbh2[(indx + m2) >> 1]))
-                            gvarv = epssq + (gquinc[0] * Dgrbv2[indx >> 1] + gquinc[1] * (Dgrbv2[(indx - m1) >> 1] + Dgrbv2[(indx + p1) >> 1] + Dgrbv2[(indx - p1) >> 1] + Dgrbv2[(indx + m1) >> 1].v) + gquinc[2] * (Dgrbv2[(indx - v2) >> 1] + Dgrbv2[(indx - 2) >> 1] + Dgrbv2[(indx + 2) >> 1] + Dgrbv2[(indx + v2) >> 1]) + gquinc[3] * (Dgrbv2[(indx - m2) >> 1] + Dgrbv2[(indx + p2) >> 1] + Dgrbv2[(indx - p2) >> 1] + Dgrbv2[(indx + m2) >> 1]))
+                            gvarv = epssq + (gquinc[0] * Dgrbv2[indx >> 1] + gquinc[1] * (Dgrbv2[(indx - m1) >> 1] + Dgrbv2[(indx + p1) >> 1] + Dgrbv2[(indx - p1) >> 1] + Dgrbv2[(indx + m1) >> 1]) + gquinc[2] * (Dgrbv2[(indx - v2) >> 1] + Dgrbv2[(indx - 2) >> 1] + Dgrbv2[(indx + 2) >> 1] + Dgrbv2[(indx + v2) >> 1]) + gquinc[3] * (Dgrbv2[(indx - m2) >> 1] + Dgrbv2[(indx + p2) >> 1] + Dgrbv2[(indx - p2) >> 1] + Dgrbv2[(indx + m2) >> 1]))
                             # use the results as weights for refined G interpolation
                             Dgrb[0, indx >> 1] = (hcd[indx] * gvarv + vcd[indx] * gvarh) / (gvarv + gvarh)
                             rgbgreen[indx] = cfa[indx] + Dgrb[0, indx >> 1]
@@ -502,23 +506,23 @@ def amaze_denosaic_cpp(src, raw):
                     # bound the interpolation in regions of high saturation
                     if rbp[indx1] < cfa[indx]:
                         if 2 * (rbp[indx1]) < cfa[indx]:
-                            rbp[indx1] = np.median(rbp[indx1] , cfa[indx - p1], cfa[indx + p1])
+                            rbp[indx1] = np.median([rbp[indx1] , cfa[indx - p1], cfa[indx + p1]])
                         else:
                             pwt = 2 * (cfa[indx] - rbp[indx1]) / (eps + rbp[indx1] + cfa[indx])
-                            rbp[indx1] = pwt * rbp[indx1] + (1 - pwt) * np.median(rbp[indx1], cfa[indx - p1], cfa[indx + p1])
+                            rbp[indx1] = pwt * rbp[indx1] + (1 - pwt) * np.median([rbp[indx1], cfa[indx - p1], cfa[indx + p1]])
 
                     if rbm[indx1] < cfa[indx]:
                         if 2 * (rbm[indx1]) < cfa[indx]:
-                            rbm[indx1] = np.median(rbm[indx1] , cfa[indx - m1], cfa[indx + m1])
+                            rbm[indx1] = np.median([rbm[indx1] , cfa[indx - m1], cfa[indx + m1]])
                         else:
                             mwt = 2 * (cfa[indx] - rbm[indx1]) / (eps + rbm[indx1] + cfa[indx])
-                            rbm[indx1] = mwt * rbm[indx1] + (1 - mwt) * np.median(rbm[indx1], cfa[indx - m1], cfa[indx + m1])
+                            rbm[indx1] = mwt * rbm[indx1] + (1 - mwt) * np.median([rbm[indx1], cfa[indx - m1], cfa[indx + m1]])
 
                     if rbp[indx1] > clip_pt:
-                        rbp[indx1] = np.median(rbp[indx1], cfa[indx - p1], cfa[indx + p1])
+                        rbp[indx1] = np.median([rbp[indx1], cfa[indx - p1], cfa[indx + p1]])
 
                     if rbm[indx1] > clip_pt:
-                        rbm[indx1] = np.median(rbm[indx1], cfa[indx - m1], cfa[indx + m1])
+                        rbm[indx1] = np.median([rbm[indx1], cfa[indx - m1], cfa[indx + m1]])
             
 
             for rr in range(10, rr1-10):
@@ -575,23 +579,23 @@ def amaze_denosaic_cpp(src, raw):
                     # bound the interpolation in regions of high saturation
                     if Gintv < rbint[indx1]:
                         if (2 * Gintv < rbint[indx1]):
-                            Gintv = np.median(Gintv , cfa[indx - v1], cfa[indx + v1])
+                            Gintv = np.median([Gintv , cfa[indx - v1], cfa[indx + v1]])
                         else:
                             vwt = 2 * (rbint[indx1] - Gintv) / (eps + Gintv + rbint[indx1])
-                            Gintv = vwt * Gintv + (1 - vwt) * np.median(Gintv, cfa[indx - v1], cfa[indx + v1])
+                            Gintv = vwt * Gintv + (1 - vwt) * np.median([Gintv, cfa[indx - v1], cfa[indx + v1]])
 
                     if Ginth < rbint[indx1]:
                         if 2 * Ginth < rbint[indx1]:
-                            Ginth = np.median(Ginth , cfa[indx - 1], cfa[indx + 1])
+                            Ginth = np.median([Ginth , cfa[indx - 1], cfa[indx + 1]])
                         else:
                             hwt = 2 * (rbint[indx1] - Ginth) / (eps + Ginth + rbint[indx1])
-                            Ginth = hwt * Ginth + (1 - hwt) * np.median(Ginth, cfa[indx - 1], cfa[indx + 1])
+                            Ginth = hwt * Ginth + (1 - hwt) * np.median([Ginth, cfa[indx - 1], cfa[indx + 1]])
 
                     if Ginth > clip_pt:
-                        Ginth = np.median(Ginth, cfa[indx - 1], cfa[indx + 1])
+                        Ginth = np.median([Ginth, cfa[indx - 1], cfa[indx + 1]])
 
                     if Gintv > clip_pt:
-                        Gintv = np.median(Gintv, cfa[indx - v1], cfa[indx + v1])
+                        Gintv = np.median([Gintv, cfa[indx - v1], cfa[indx + v1]])
 
                     rgbgreen[indx] = Ginth * (1 - hvwt[indx1]) + Gintv * hvwt[indx1]
                     Dgrb[0, indx >> 1] = rgbgreen[indx] - cfa[indx]
@@ -607,7 +611,7 @@ def amaze_denosaic_cpp(src, raw):
                     Dgrb[0, indx1] = 0
 
             for rr in range(14, rr1 - 14):
-                c = 1 - fc(cfarray, rr, 14 + (fc(cfarray, rr, 2) & 1)) / 2
+                c = int(1 - fc(cfarray, rr, 14 + (fc(cfarray, rr, 2) & 1)) / 2)
                 for cc in range(14 + (fc(cfarray, rr, 2) & 1), cc1 - 14, 2):
                     indx = rr * ts + cc
                     wtnw = 1 / (eps + abs(Dgrb[c, (indx - m1) >> 1] - Dgrb[c, (indx + m1) >> 1]) + abs(Dgrb[c, (indx - m1) >> 1] - Dgrb[c, (indx - m3) >> 1]) + abs(Dgrb[c, (indx + m1) >> 1] - Dgrb[c, (indx - m3) >> 1]))
@@ -615,7 +619,7 @@ def amaze_denosaic_cpp(src, raw):
                     wtsw = 1 / (eps + abs(Dgrb[c, (indx - p1) >> 1] - Dgrb[c, (indx + p1) >> 1]) + abs(Dgrb[c, (indx - p1) >> 1] - Dgrb[c, (indx + m3) >> 1]) + abs(Dgrb[c, (indx + p1) >> 1] - Dgrb[c, (indx - p3) >> 1]))
                     wtse = 1 / (eps + abs(Dgrb[c, (indx + m1) >> 1] - Dgrb[c, (indx - m1) >> 1]) + abs(Dgrb[c, (indx + m1) >> 1] - Dgrb[c, (indx - p3) >> 1]) + abs(Dgrb[c, (indx - m1) >> 1] - Dgrb[c, (indx + m3) >> 1]))
 
-                    Dgrb[c, indx >> 1] = (wtnw * (1.325 * Dgrb[c, (indx - m1) >> 1] - 0.175 * Dgrb[c, (indx - m3) >> 1] - 0.075 * Dgrb[c, (indx - m1 - 2) >> 1] - 0.075 * Dgrb[c, (indx - m1 - v2) >> 1] ) + wtne * (1.325 * Dgrb[c, (indx + p1) >> 1] - 0.175 * Dgrb[c, (indx + p3) >> 1] - 0.075 * Dgrb[c, (indx + p1 + 2) >> 1] - 0.075 * Dgrb[c, (indx + p1 + v2) >> 1] ) + wtsw * (1.325 * Dgrb[c, (indx - p1) >> 1] - 0.175 * Dgrb[c, (indx - p3) >> 1] - 0.075 * Dgrb[c, (indx - p1 - 2) >> 1] - 0.075 * Dgrb[c, (indx - p1 - v2) >> 1] ) + wtse * (1.325 * Dgrb[c (indx + m1) >> 1] - 0.175 * Dgrb[c, (indx + m3) >> 1] - 0.075 * Dgrb[c, (indx + m1 + 2) >> 1] - 0.075 * Dgrb[c, (indx + m1 + v2) >> 1] )) / (wtnw + wtne + wtsw + wtse)
+                    Dgrb[c, indx >> 1] = (wtnw * (1.325 * Dgrb[c, (indx - m1) >> 1] - 0.175 * Dgrb[c, (indx - m3) >> 1] - 0.075 * Dgrb[c, (indx - m1 - 2) >> 1] - 0.075 * Dgrb[c, (indx - m1 - v2) >> 1] ) + wtne * (1.325 * Dgrb[c, (indx + p1) >> 1] - 0.175 * Dgrb[c, (indx + p3) >> 1] - 0.075 * Dgrb[c, (indx + p1 + 2) >> 1] - 0.075 * Dgrb[c, (indx + p1 + v2) >> 1] ) + wtsw * (1.325 * Dgrb[c, (indx - p1) >> 1] - 0.175 * Dgrb[c, (indx - p3) >> 1] - 0.075 * Dgrb[c, (indx - p1 - 2) >> 1] - 0.075 * Dgrb[c, (indx - p1 - v2) >> 1] ) + wtse * (1.325 * Dgrb[c, (indx + m1) >> 1] - 0.175 * Dgrb[c, (indx + m3) >> 1] - 0.075 * Dgrb[c, (indx + m1 + 2) >> 1] - 0.075 * Dgrb[c, (indx + m1 + v2) >> 1] )) / (wtnw + wtne + wtsw + wtse)
 
             for rr in range(16, rr1-16):
                 row = rr + top
@@ -674,5 +678,5 @@ def amaze_denosaic_cpp(src, raw):
                 for cc in range(16, cc1-16):
                     RGB[row, cc+left, 1] = max(0, 65535 * rgbgreen[rr * ts + cc])
 
-            
+    return RGB
 
