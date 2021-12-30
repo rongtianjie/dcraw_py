@@ -1,6 +1,5 @@
 import numpy as np
 from numba import jit
-from colour.utilities.array import vector_dot
 
 def fc(cfa, r, c):
     return cfa[r&1, c&1]
@@ -8,14 +7,16 @@ def fc(cfa, r, c):
 def intp(a, b, c):
     return a * (b - c) + c
 
-def amaze_denosaic(src, raw):
-    return amaze_denosaic_cpp(src, raw.raw_pattern, raw.daylight_whitebalance)
+def SQR(x):
+    return x ** 2
 
-@jit(nopython=True)
-def amaze_denosaic_cpp(src, cfarray, daylight_wb):
+def amaze_demosaic(src, raw):
+    return amaze_demosaic_darktable(src, raw.raw_pattern, raw.daylight_whitebalance)
 
-    ts = 512
-    tsh = int(ts/2)
+def amaze_demosaic_darktable(src, cfarray, daylight_wb):
+
+    TS = 512
+    TSh = int(TS/2)
     winx = winy = 0
     width = src.shape[1]
     height = src.shape[0]
@@ -32,15 +33,15 @@ def amaze_denosaic_cpp(src, cfarray, daylight_wb):
         else: 
             ex = ey = 1
 
-    v1 = ts
-    v2 = 2 * ts
-    v3 = 3 * ts
-    p1 = -ts + 1
-    p2 = -2 * ts + 2
-    p3 = -3 * ts + 3
-    m1 = ts + 1 
-    m2 = 2 * ts + 2
-    m3 = 3 * ts + 3
+    v1 = TS
+    v2 = 2 * TS
+    v3 = 3 * TS
+    p1 = -TS + 1
+    p2 = -2 * TS + 2
+    p3 = -3 * TS + 3
+    m1 = TS + 1 
+    m2 = 2 * TS + 2
+    m3 = 3 * TS + 3
 
     eps, epssq = 1e-5, 1e-10
     arthresh = 0.75
@@ -53,12 +54,12 @@ def amaze_denosaic_cpp(src, cfarray, daylight_wb):
     
     loop_cnt = 1
 
-    for top in range(winy-16, winy+height, ts-32):
-        for left in range(winx-16, winx+width, ts-32):
-            print("Loop [{}]".format(loop_cnt))
+    for top in range(winy-16, winy+height, TS-32):
+        for left in range(winx-16, winx+width, TS-32):
+            print("Loop [{}]: top: {} left: {}".format(loop_cnt, top, left))
             loop_cnt += 1
-            bottom = min(top+ts, winy+height+16)
-            right = min(left+ts, winx+width+16)
+            bottom = min(top+TS, winy+height+16)
+            right = min(left+TS, winx+width+16)
             rr1 = bottom - top
             cc1 = right - left
             
@@ -67,32 +68,32 @@ def amaze_denosaic_cpp(src, cfarray, daylight_wb):
             rrmax = winy+height-top if bottom>(winy+height) else rr1
             ccmax = winx+width-left if right>(winx+width) else cc1
 
-            rgbgreen = np.empty(ts*ts, dtype=np.float32)
-            cfa = np.empty(ts*ts, dtype=np.float32)
-            delhvsqsum = np.empty(ts*ts, dtype=np.float32)
-            dirwts0 = np.empty(ts*ts, dtype=np.float32)
-            dirwts1 = np.empty(ts*ts, dtype=np.float32)
-            vcd = np.empty(ts*ts, dtype=np.float32)
-            hcd = np.empty(ts*ts, dtype=np.float32)
-            vcdalt = np.empty(ts*ts, dtype=np.float32)
-            hcdalt = np.empty(ts*ts, dtype=np.float32)
-            dgintv = np.empty(ts*ts, dtype=np.float32)
-            dginth = np.empty(ts*ts, dtype=np.float32)
-            cddiffsq = np.empty(ts*ts, dtype=np.float32)
-            hvwt = np.empty(ts*ts, dtype=np.float32)
-            nyquist = np.empty(ts*ts, dtype=np.float32)
-            nyqutest = np.empty(ts*ts, dtype=np.float32)
-            Dgrb = np.empty([2, ts*ts], dtype=np.float32)
-            Dgrbh2 = np.empty(ts*ts, dtype=np.float32)
-            Dgrbv2 = np.empty(ts*ts, dtype=np.float32)
-            delp = np.empty(ts*ts, dtype=np.float32)
-            delm = np.empty(ts*ts, dtype=np.float32)
-            Dgrbsq1p = np.empty(ts*ts, dtype=np.float32)
-            Dgrbsq1m = np.empty(ts*ts, dtype=np.float32)
-            rbm = np.empty(ts*ts, dtype=np.float32)
-            rbp = np.empty(ts*ts, dtype=np.float32)
-            pmwt = np.empty(ts*ts, dtype=np.float32)
-            rbint = np.empty(ts*ts, dtype=np.float32)
+            rgbgreen = np.empty(TS*TS, dtype=np.float32)
+            cfa = np.empty(TS*TS, dtype=np.float32)
+            delhvsqsum = np.empty(TS*TS, dtype=np.float32)
+            dirwTS0 = np.empty(TS*TS, dtype=np.float32)
+            dirwTS1 = np.empty(TS*TS, dtype=np.float32)
+            vcd = np.empty(TS*TS, dtype=np.float32)
+            hcd = np.empty(TS*TS, dtype=np.float32)
+            vcdalt = np.empty(TS*TS, dtype=np.float32)
+            hcdalt = np.empty(TS*TS, dtype=np.float32)
+            dgintv = np.empty(TS*TS, dtype=np.float32)
+            dginth = np.empty(TS*TS, dtype=np.float32)
+            cddiffsq = np.empty(TS*TS, dtype=np.float32)
+            hvwt = np.empty(TS*TS, dtype=np.float32)
+            nyquist = np.empty(TS*TS, dtype=np.float32)
+            nyqutest = np.empty(TS*TS, dtype=np.float32)
+            Dgrb = np.empty([2, TS*TS], dtype=np.float32)
+            Dgrbh2 = np.empty(TS*TS, dtype=np.float32)
+            Dgrbv2 = np.empty(TS*TS, dtype=np.float32)
+            delp = np.empty(TS*TS, dtype=np.float32)
+            delm = np.empty(TS*TS, dtype=np.float32)
+            Dgrbsq1p = np.empty(TS*TS, dtype=np.float32)
+            Dgrbsq1m = np.empty(TS*TS, dtype=np.float32)
+            rbm = np.empty(TS*TS, dtype=np.float32)
+            rbp = np.empty(TS*TS, dtype=np.float32)
+            pmwt = np.empty(TS*TS, dtype=np.float32)
+            rbint = np.empty(TS*TS, dtype=np.float32)
             RGB = np.empty([height, width, 3], dtype=np.uint16)
             
             
@@ -101,14 +102,14 @@ def amaze_denosaic_cpp(src, cfarray, daylight_wb):
                 for rr in range(16):
                     for cc in range(ccmin, ccmax):
                         row = 32 - rr + top
-                        cfa[rr*ts+cc] = src[row, cc+left] / 65535
-                        rgbgreen[rr*ts+cc] = cfa[rr*ts+cc]
+                        cfa[rr*TS+cc] = src[row, cc+left] / 65535
+                        rgbgreen[rr*TS+cc] = cfa[rr*TS+cc]
 
             # fill inner part
             for rr in range(rrmin, rrmax):
                 row = rr + top
                 for cc in range(ccmin, ccmax):
-                    indx1 = rr * ts + cc
+                    indx1 = rr * TS + cc
                     cfa[indx1] = src[row, cc+left] / 65535
                     rgbgreen[indx1] = cfa[indx1]
 
@@ -116,68 +117,68 @@ def amaze_denosaic_cpp(src, cfarray, daylight_wb):
             if rrmax < rr1:
                 for rr in range(16):
                     for cc in range(ccmin, ccmax):
-                        cfa[(rrmax+rr)*ts+cc] = src[winy+height-rr-2, left+cc] / 65535
-                        rgbgreen[(rrmax+rr)*ts+cc] = cfa[(rrmax+rr)*ts+cc]
+                        cfa[(rrmax+rr)*TS+cc] = src[winy+height-rr-2, left+cc] / 65535
+                        rgbgreen[(rrmax+rr)*TS+cc] = cfa[(rrmax+rr)*TS+cc]
             
             # fill left border
             if ccmin > 0:
                 for rr in range(rrmin, rrmax):
                     for cc in range(16):
-                        cfa[rr*ts+cc] = src[row, 32-cc+left] / 65535
-                        rgbgreen[rr*ts+cc] = cfa[rr*ts+cc]
+                        cfa[rr*TS+cc] = src[row, 32-cc+left] / 65535
+                        rgbgreen[rr*TS+cc] = cfa[rr*TS+cc]
             
             # fill right border
             if ccmax < cc1:
                 for rr in range(rrmin, rrmax):
                     for cc in range(16):
-                        cfa[rr*ts+ccmax+cc] = src[top+rr, winx+width-cc-2] / 65535
-                        rgbgreen[rr*ts+ccmax+cc] = cfa[rr*ts+ccmax+cc]
+                        cfa[rr*TS+ccmax+cc] = src[top+rr, winx+width-cc-2] / 65535
+                        rgbgreen[rr*TS+ccmax+cc] = cfa[rr*TS+ccmax+cc]
 
             # fill the image corners
             if rrmin > 0 and ccmin > 0:
                 for rr in range(16):
                     for cc in range(16):
-                        cfa[rr*ts+cc] = src[winy+32-rr, winx+32-cc] / 65535
-                        rgbgreen[rr*ts+cc] = cfa[rr*ts+cc]
+                        cfa[rr*TS+cc] = src[winy+32-rr, winx+32-cc] / 65535
+                        rgbgreen[rr*TS+cc] = cfa[rr*TS+cc]
             
             if rrmax < rr1 and ccmax < cc1:
                 for rr in range(16):
                     for cc in range(16):
-                        cfa[(rrmax+rr)*ts+ccmax+cc] = src[winy+height-rr-2, winx+width-cc-2] / 65535
-                        rgbgreen[(rrmax+rr)*ts+ccmax+cc] = cfa[(rrmax+rr)*ts+ccmax+cc]
+                        cfa[(rrmax+rr)*TS+ccmax+cc] = src[winy+height-rr-2, winx+width-cc-2] / 65535
+                        rgbgreen[(rrmax+rr)*TS+ccmax+cc] = cfa[(rrmax+rr)*TS+ccmax+cc]
             
             if rrmin > 0 and ccmax < cc1:
                 for rr in range(16):
                     for cc in range(16):
-                        cfa[rr*ts+ccmax+cc] = src[winy+32-rr, winx+width-cc-2] / 65535
-                        rgbgreen[rr*ts+ccmax+cc] = cfa[rr*ts+ccmax+cc]
+                        cfa[rr*TS+ccmax+cc] = src[winy+32-rr, winx+width-cc-2] / 65535
+                        rgbgreen[rr*TS+ccmax+cc] = cfa[rr*TS+ccmax+cc]
 
             if rrmax < rr1 and ccmin > 0:
                 for rr in range(16):
                     for cc in range(16):
-                        cfa[(rrmax+rr)*ts+cc] = src[winy+height-rr-2, winx+32-cc] / 65535
-                        rgbgreen[(rrmax+rr)*ts+cc] = cfa[(rrmax+rr)*ts+cc]
+                        cfa[(rrmax+rr)*TS+cc] = src[winy+height-rr-2, winx+32-cc] / 65535
+                        rgbgreen[(rrmax+rr)*TS+cc] = cfa[(rrmax+rr)*TS+cc]
             
             for rr in range(2, rr1-2):
                 for cc in range(2, cc1-2):
-                    indx = rr*ts+cc
+                    indx = rr*TS+cc
                     delh = abs(cfa[indx + 1] - cfa[indx - 1])
                     delv = abs(cfa[indx + v1] - cfa[indx - v1])
-                    dirwts0[indx] = eps + abs(cfa[indx + v2] - cfa[indx]) + abs(cfa[indx] - cfa[indx - v2]) + delv
-                    dirwts1[indx] = eps + abs(cfa[indx + 2] - cfa[indx]) + abs(cfa[indx] - cfa[indx - 2]) + delh
+                    dirwTS0[indx] = eps + abs(cfa[indx + v2] - cfa[indx]) + abs(cfa[indx] - cfa[indx - v2]) + delv
+                    dirwTS1[indx] = eps + abs(cfa[indx + 2] - cfa[indx]) + abs(cfa[indx] - cfa[indx - 2]) + delh
                     delhvsqsum[indx] = delh ** 2 + delv ** 2
 
             for rr in range(4, rr1-4):
                 fcswitch = fc(cfarray, rr, 4) & 1
 
                 for cc in range(4, cc1-4):
-                    indx = rr*ts+cc
+                    indx = rr*TS+cc
 
                     # colour ratios in each cardinal direction
-                    cru = cfa[indx - v1] * (dirwts0[indx - v2] + dirwts0[indx]) / (dirwts0[indx - v2] * (eps + cfa[indx]) + dirwts0[indx] * (eps + cfa[indx - v2]))
-                    crd = cfa[indx + v1] * (dirwts0[indx + v2] + dirwts0[indx]) / (dirwts0[indx + v2] * (eps + cfa[indx]) + dirwts0[indx] * (eps + cfa[indx + v2]))
-                    crl = cfa[indx - 1] * (dirwts1[indx - 2] + dirwts1[indx]) / (dirwts1[indx - 2] * (eps + cfa[indx]) + dirwts1[indx] * (eps + cfa[indx - 2]))
-                    crr = cfa[indx + 1] * (dirwts1[indx + 2] + dirwts1[indx]) / (dirwts1[indx + 2] * (eps + cfa[indx]) + dirwts1[indx] * (eps + cfa[indx + 2]))
+                    cru = cfa[indx - v1] * (dirwTS0[indx - v2] + dirwTS0[indx]) / (dirwTS0[indx - v2] * (eps + cfa[indx]) + dirwTS0[indx] * (eps + cfa[indx - v2]))
+                    crd = cfa[indx + v1] * (dirwTS0[indx + v2] + dirwTS0[indx]) / (dirwTS0[indx + v2] * (eps + cfa[indx]) + dirwTS0[indx] * (eps + cfa[indx + v2]))
+                    crl = cfa[indx - 1] * (dirwTS1[indx - 2] + dirwTS1[indx]) / (dirwTS1[indx - 2] * (eps + cfa[indx]) + dirwTS1[indx] * (eps + cfa[indx - 2]))
+                    crr = cfa[indx + 1] * (dirwTS1[indx + 2] + dirwTS1[indx]) / (dirwTS1[indx + 2] * (eps + cfa[indx]) + dirwTS1[indx] * (eps + cfa[indx + 2]))
 
                     # G interpolated in vert/hor directions using Hamilton-Adams method
                     guha = min(clip_pt, cfa[indx - v1] + 0.5 * (cfa[indx] - cfa[indx - v2]))
@@ -191,11 +192,11 @@ def amaze_denosaic_cpp(src, cfarray, daylight_wb):
                     glar = cfa[indx] * crl if abs(1-crl) < arthresh else glha
                     grar = cfa[indx] * crr if abs(1-crr) < arthresh else grha
                     
-                    # adaptive weights for vertical/horizontal directions
-                    hwt = dirwts1[indx - 1] / (dirwts1[indx - 1] + dirwts1[indx + 1])
-                    vwt = dirwts0[indx - v1] / (dirwts0[indx + v1] + dirwts0[indx - v1])
+                    # adaptive weighTS for vertical/horizontal directions
+                    hwt = dirwTS1[indx - 1] / (dirwTS1[indx - 1] + dirwTS1[indx + 1])
+                    vwt = dirwTS0[indx - v1] / (dirwTS0[indx + v1] + dirwTS0[indx - v1])
 
-                    # interpolated G via adaptive weights of cardinal evaluations
+                    # interpolated G via adaptive weighTS of cardinal evaluations
                     Gintvha = vwt * gdha + (1 - vwt) * guha
                     Ginthha = hwt * grha + (1 - hwt) * glha
 
@@ -214,7 +215,7 @@ def amaze_denosaic_cpp(src, cfarray, daylight_wb):
                     fcswitch = 1 - fcswitch
 
                     if cfa[indx] > 0.8 * clip_pt or Gintvha > 0.8 * clip_pt or Ginthha > 0.8 * clip_pt:
-                        # use HA if highlights are (nearly) clipped
+                        # use HA if highlighTS are (nearly) clipped
                         guar = guha
                         gdar = gdha
                         glar = glha
@@ -230,7 +231,7 @@ def amaze_denosaic_cpp(src, cfarray, daylight_wb):
             for rr in range(4, rr1-4):
                 c = fc(cfarray, rr, 4) & 1
                 for cc in range(4, cc1-4):
-                    indx = rr*ts+cc
+                    indx = rr*TS+cc
                     hcdvar = 3 * (hcd[indx - 2]**2 + hcd[indx]**2 + hcd[indx + 2]**2) - (hcd[indx - 2] + hcd[indx] + hcd[indx + 2])**2
                     hcdaltvar = 3 * (hcdalt[indx - 2]**2 + hcdalt[indx]**2 + hcdalt[indx + 2]**2) - (hcdalt[indx - 2] + hcdalt[indx] + hcdalt[indx + 2])**2
                     vcdvar = 3 * (vcd[indx - v2]**2 + vcd[indx]**2 + vcd[indx + v2]**2) - (vcd[indx - v2] + vcd[indx] + vcd[indx + v2])**2
@@ -298,7 +299,7 @@ def amaze_denosaic_cpp(src, cfarray, daylight_wb):
 
             for rr in range(6, rr1-6):
                 for cc in range(6+(fc(cfarray, rr, 2) & 1), cc1-6, 2):
-                    indx = rr * ts + cc
+                    indx = rr * TS + cc
 
                     # compute colour difference variances in cardinal directions
                     uave = vcd[indx] + vcd[indx - v1] + vcd[indx - v2] + vcd[indx - v3]
@@ -312,8 +313,8 @@ def amaze_denosaic_cpp(src, cfarray, daylight_wb):
                     Dgrbhvarl = (hcd[indx] - lave)**2 + (hcd[indx - 1] - lave)**2 + (hcd[indx - 2] - lave)**2 + (hcd[indx - 3] - lave)**2
                     Dgrbhvarr = (hcd[indx] - rave)**2 + (hcd[indx + 1] - rave)**2 + (hcd[indx + 2] - rave)**2 + (hcd[indx + 3] - rave)**2
 
-                    hwt = dirwts1[indx - 1] / (dirwts1[indx - 1] + dirwts1[indx + 1])
-                    vwt = dirwts0[indx - v1] / (dirwts0[indx + v1] + dirwts0[indx - v1])
+                    hwt = dirwTS1[indx - 1] / (dirwTS1[indx - 1] + dirwTS1[indx + 1])
+                    vwt = dirwTS0[indx - v1] / (dirwTS0[indx + v1] + dirwTS0[indx - v1])
 
                     vcdvar = epssq + vwt * Dgrbvvard + (1 - vwt) * Dgrbvvaru
                     hcdvar = epssq + hwt * Dgrbhvarr + (1 - hwt) * Dgrbhvarl
@@ -327,12 +328,12 @@ def amaze_denosaic_cpp(src, cfarray, daylight_wb):
                     vcdvar1 = epssq + vwt * Dgrbvvard + (1 - vwt) * Dgrbvvaru
                     hcdvar1 = epssq + hwt * Dgrbhvarr + (1 - hwt) * Dgrbhvarl
 
-                    # determine adaptive weights for G interpolation
+                    # determine adaptive weighTS for G interpolation
                     varwt = hcdvar / (vcdvar + hcdvar)
                     diffwt = hcdvar1 / (vcdvar1 + hcdvar1)
 
                     # if both agree on interpolation direction, choose the one with strongest directional discrimination;
-                    # otherwise, choose the u/d and l/r difference fluctuation weights
+                    # otherwise, choose the u/d and l/r difference fluctuation weighTS
                     if ((0.5 - varwt) * (0.5 - diffwt) > 0) and (abs(0.5 - diffwt) < abs(0.5 - varwt)):
                         hvwt[indx >> 1] = varwt
                     else:
@@ -340,19 +341,19 @@ def amaze_denosaic_cpp(src, cfarray, daylight_wb):
 
             for rr in range(6, rr1-6):
                 for cc in range(6 + (fc(cfarray, rr, 2) & 1), cc1 - 6, 2):
-                    indx = rr * ts + cc
-                    nyqutest[indx >> 1] = (gaussodd[0] * cddiffsq[indx] + gaussodd[1] * (cddiffsq[(indx - m1)] + cddiffsq[(indx + p1)] + cddiffsq[(indx - p1)] + cddiffsq[(indx + m1)]) + gaussodd[2] * (cddiffsq[(indx - v2)] + cddiffsq[(indx - 2)] + cddiffsq[(indx + 2)] + cddiffsq[(indx + v2)]) + gaussodd[3] * (cddiffsq[(indx - m2)] + cddiffsq[(indx + p2)] + cddiffsq[(indx - p2)] + cddiffsq[(indx + m2)])) - (gaussgrad[0] *  delhvsqsum[indx] + gaussgrad[1] * (delhvsqsum[indx - v1] + delhvsqsum[indx + 1] + delhvsqsum[indx - 1] + delhvsqsum[indx + v1]) + gaussgrad[2] * (delhvsqsum[indx - m1] + delhvsqsum[indx + p1] + delhvsqsum[indx - p1] + delhvsqsum[indx + m1]) + gaussgrad[3] * (delhvsqsum[indx - v2] + delhvsqsum[indx - 2] + delhvsqsum[indx + 2] + delhvsqsum[indx + v2]) + gaussgrad[4] * (delhvsqsum[indx - v2 - 1] + delhvsqsum[indx - v2 + 1] + delhvsqsum[indx - ts - 2] + delhvsqsum[indx - ts + 2] + delhvsqsum[indx + ts - 2] + delhvsqsum[indx + ts + 2] + delhvsqsum[indx + v2 - 1] + delhvsqsum[indx + v2 + 1]) + gaussgrad[5] * (delhvsqsum[indx - m2] + delhvsqsum[indx + p2] + delhvsqsum[indx - p2] + delhvsqsum[indx + m2]))
+                    indx = rr * TS + cc
+                    nyqutest[indx >> 1] = (gaussodd[0] * cddiffsq[indx] + gaussodd[1] * (cddiffsq[(indx - m1)] + cddiffsq[(indx + p1)] + cddiffsq[(indx - p1)] + cddiffsq[(indx + m1)]) + gaussodd[2] * (cddiffsq[(indx - v2)] + cddiffsq[(indx - 2)] + cddiffsq[(indx + 2)] + cddiffsq[(indx + v2)]) + gaussodd[3] * (cddiffsq[(indx - m2)] + cddiffsq[(indx + p2)] + cddiffsq[(indx - p2)] + cddiffsq[(indx + m2)])) - (gaussgrad[0] *  delhvsqsum[indx] + gaussgrad[1] * (delhvsqsum[indx - v1] + delhvsqsum[indx + 1] + delhvsqsum[indx - 1] + delhvsqsum[indx + v1]) + gaussgrad[2] * (delhvsqsum[indx - m1] + delhvsqsum[indx + p1] + delhvsqsum[indx - p1] + delhvsqsum[indx + m1]) + gaussgrad[3] * (delhvsqsum[indx - v2] + delhvsqsum[indx - 2] + delhvsqsum[indx + 2] + delhvsqsum[indx + v2]) + gaussgrad[4] * (delhvsqsum[indx - v2 - 1] + delhvsqsum[indx - v2 + 1] + delhvsqsum[indx - TS - 2] + delhvsqsum[indx - TS + 2] + delhvsqsum[indx + TS - 2] + delhvsqsum[indx + TS + 2] + delhvsqsum[indx + v2 - 1] + delhvsqsum[indx + v2 + 1]) + gaussgrad[5] * (delhvsqsum[indx - m2] + delhvsqsum[indx + p2] + delhvsqsum[indx - p2] + delhvsqsum[indx + m2]))
             
             # Nyquist test
             nystartrow = 0
             nyendrow = 0
-            nystartcol = ts + 1
+            nystartcol = TS + 1
             nyendcol = 0
 
             for rr in range(6, rr1-6):
                 for cc in range(6 + (fc(cfarray, rr, 2) & 1), cc1 - 6, 2):
-                    indx = rr * ts + cc
-                    # nyquist texture test: ask if difference of vcd compared to hcd is larger or smaller than RGGB gradients
+                    indx = rr * TS + cc
+                    # nyquist texture test: ask if difference of vcd compared to hcd is larger or smaller than RGGB gradienTS
                     if nyqutest[indx >> 1] > 0:
                         nyquist[indx >> 1] = 1;    # nyquist=1 for nyquist region
                         nystartrow = nystartrow if nystartrow else rr
@@ -370,10 +371,10 @@ def amaze_denosaic_cpp(src, cfarray, daylight_wb):
                 nyendrow = min(rr1 - 8, nyendrow)
                 nystartcol = max(8, nystartcol)
                 nyendcol = min(cc1 - 8, nyendcol)
-                nyquist2 = np.zeros(ts*ts, dtype=np.int16)
+                nyquist2 = np.zeros(TS*TS, dtype=np.int16)
 
                 for rr in range(nystartrow, nyendrow):
-                    for indx in range(rr*ts+nystartcol+(fc(cfarray, rr, 2)&1), rr*ts+nyendcol, 2):
+                    for indx in range(rr*TS+nystartcol+(fc(cfarray, rr, 2)&1), rr*TS+nyendcol, 2):
                         nyquisttemp = (nyquist[(indx - v2) >> 1] + nyquist[(indx - m1) >> 1] + nyquist[(indx + p1) >> 1] + nyquist[(indx - 2) >> 1] + nyquist[(indx + 2) >> 1] + nyquist[(indx - p1) >> 1] + nyquist[(indx + m1) >> 1] + nyquist[(indx + v2) >> 1])
                         # if most of your neighbours are named Nyquist, it's likely that you're one too, or not
                         nyquist2[indx >> 1] = 1 if nyquisttemp > 4 else (0 if nyquisttemp < 4 else nyquist[indx >> 1])
@@ -383,14 +384,14 @@ def amaze_denosaic_cpp(src, cfarray, daylight_wb):
                 # in areas of Nyquist texture, do area interpolation
 
                 for rr in range(nystartrow, nyendrow):
-                    for indx in range(rr * ts + nystartcol + (fc(cfarray, rr, 2)&1), rr * ts + nyendcol, 2):
+                    for indx in range(rr * TS + nystartcol + (fc(cfarray, rr, 2)&1), rr * TS + nyendcol, 2):
                         if nyquist2[indx >> 1]:
                             # area interpolation
                             sumcfa = sumh = sumv = sumsqh = sumsqv = areawt = 0
 
                             for i in range(-6, 7, 2):
                                 for j in range(-6, 7, 2):
-                                    indx1 = indx + (i * ts) + j
+                                    indx1 = indx + (i * TS) + j
                                     if nyquist2[indx1 >> 1]:
                                         cfatemp = cfa[indx1]
                                         sumcfa += cfatemp
@@ -409,8 +410,8 @@ def amaze_denosaic_cpp(src, cfarray, daylight_wb):
             
             # populate G at R/B sites
             for rr in range(8, rr1-8):
-                for indx in range(rr * ts + 8 + (fc(cfarray, rr, 2) & 1), rr * ts + cc1 - 8, 2):
-                    # first ask if one gets more directional discrimination from nearby B/R sites
+                for indx in range(rr * TS + 8 + (fc(cfarray, rr, 2) & 1), rr * TS + cc1 - 8, 2):
+                    # first ask if one geTS more directional discrimination from nearby B/R sites
                     hvwtalt = 0.25*(hvwt[(indx-m1)>>1]+hvwt[(indx+p1)>>1]+hvwt[(indx-p1)>>1]+hvwt[(indx+m1)>>1])
                     vo=abs(0.5-hvwt[indx>>1])
                     ve=abs(0.5-hvwtalt)
@@ -433,26 +434,26 @@ def amaze_denosaic_cpp(src, cfarray, daylight_wb):
             # refine Nyquist areas using G curvatures
             if doNyquist:
                 for rr in range(nystartrow, nyendrow):
-                    for indx in range(rr * ts + nystartcol + (fc(cfarray, rr, 2) & 1), rr * ts + nyendcol, 2):
+                    for indx in range(rr * TS + nystartcol + (fc(cfarray, rr, 2) & 1), rr * TS + nyendcol, 2):
                         if nyquist2[indx >> 1]:
                             # local averages (over Nyquist pixels only) of G curvature squared
                             gvarh = epssq + (gquinc[0] * Dgrbh2[indx >> 1] + gquinc[1] * (Dgrbh2[(indx - m1) >> 1] + Dgrbh2[(indx + p1) >> 1] + Dgrbh2[(indx - p1) >> 1] + Dgrbh2[(indx + m1) >> 1]) + gquinc[2] * (Dgrbh2[(indx - v2) >> 1] + Dgrbh2[(indx - 2) >> 1] + Dgrbh2[(indx + 2) >> 1] + Dgrbh2[(indx + v2) >> 1]) + gquinc[3] * (Dgrbh2[(indx - m2) >> 1] + Dgrbh2[(indx + p2) >> 1] + Dgrbh2[(indx - p2) >> 1] + Dgrbh2[(indx + m2) >> 1]))
                             gvarv = epssq + (gquinc[0] * Dgrbv2[indx >> 1] + gquinc[1] * (Dgrbv2[(indx - m1) >> 1] + Dgrbv2[(indx + p1) >> 1] + Dgrbv2[(indx - p1) >> 1] + Dgrbv2[(indx + m1) >> 1]) + gquinc[2] * (Dgrbv2[(indx - v2) >> 1] + Dgrbv2[(indx - 2) >> 1] + Dgrbv2[(indx + 2) >> 1] + Dgrbv2[(indx + v2) >> 1]) + gquinc[3] * (Dgrbv2[(indx - m2) >> 1] + Dgrbv2[(indx + p2) >> 1] + Dgrbv2[(indx - p2) >> 1] + Dgrbv2[(indx + m2) >> 1]))
-                            # use the results as weights for refined G interpolation
+                            # use the resulTS as weighTS for refined G interpolation
                             Dgrb[0, indx >> 1] = (hcd[indx] * gvarv + vcd[indx] * gvarh) / (gvarv + gvarh)
                             rgbgreen[indx] = cfa[indx] + Dgrb[0, indx >> 1]
             
             for rr in range(6, rr1-6):
                 if (fc(cfarray, rr, 2) & 1) == 0:
                     for cc in range(6, cc1-6, 2):
-                        indx = rr * ts + cc
+                        indx = rr * TS + cc
                         delp[indx >> 1] = abs(cfa[indx + p1] - cfa[indx - p1])
                         delm[indx >> 1] = abs(cfa[indx + m1] - cfa[indx - m1])
                         Dgrbsq1p[indx >> 1] = ((cfa[indx + 1] - cfa[indx + 1 - p1])**2 + (cfa[indx + 1] - cfa[indx + 1 + p1])**2)
                         Dgrbsq1m[indx >> 1] = ((cfa[indx + 1] - cfa[indx + 1 - m1])**2 + (cfa[indx + 1] - cfa[indx + 1 + m1])**2)
                 else:
                     for cc in range(6, cc1-6, 2):
-                        indx = rr * ts + cc
+                        indx = rr * TS + cc
                         delp[indx >> 1] = abs(cfa[indx + 1 + p1] - cfa[indx + 1 - p1])
                         delm[indx >> 1] = abs(cfa[indx + 1 + m1] - cfa[indx + 1 - m1])
                         Dgrbsq1p[indx >> 1] = ((cfa[indx] - cfa[indx - p1])**2 + (cfa[indx] - cfa[indx + p1])**2)
@@ -461,7 +462,7 @@ def amaze_denosaic_cpp(src, cfarray, daylight_wb):
             # diagonal interpolation correction
             for rr in range(8, rr1-8):
                 for cc in range(8 + (fc(cfarray, rr, 2) & 1), cc1 - 8, 2):
-                    indx = rr * ts + cc
+                    indx = rr * TS + cc
                     indx1 = indx >> 1
 
                     # diagonal colour ratios
@@ -490,13 +491,13 @@ def amaze_denosaic_cpp(src, cfarray, daylight_wb):
                     else:
                         rbsw = (cfa[indx - p1]) + 0.5 * (cfa[indx] - cfa[indx - p2])
                     
-                    wtse = eps + delm[indx1] + delm[(indx + m1) >> 1] + delm[(indx + m2) >> 1] # same as for wtu,wtd,wtl,wtr
+                    wTSe = eps + delm[indx1] + delm[(indx + m1) >> 1] + delm[(indx + m2) >> 1] # same as for wtu,wtd,wtl,wtr
                     wtnw = eps + delm[indx1] + delm[(indx - m1) >> 1] + delm[(indx - m2) >> 1]
                     wtne = eps + delp[indx1] + delp[(indx + p1) >> 1] + delp[(indx + p2) >> 1]
-                    wtsw = eps + delp[indx1] + delp[(indx - p1) >> 1] + delp[(indx - p2) >> 1]
+                    wTSw = eps + delp[indx1] + delp[(indx - p1) >> 1] + delp[(indx - p2) >> 1]
 
-                    rbm[indx1] = (wtse * rbnw + wtnw * rbse) / (wtse + wtnw)
-                    rbp[indx1] = (wtne * rbsw + wtsw * rbne) / (wtne + wtsw)
+                    rbm[indx1] = (wTSe * rbnw + wtnw * rbse) / (wTSe + wtnw)
+                    rbp[indx1] = (wtne * rbsw + wTSw * rbne) / (wtne + wTSw)
 
                     # variance of R-B in plus/minus directions
                     rbvarm = epssq + (gausseven[0] * (Dgrbsq1m[(indx - v1) >> 1] + Dgrbsq1m[(indx - 1) >> 1] + Dgrbsq1m[(indx + 1) >> 1] + Dgrbsq1m[(indx + v1) >> 1]) + gausseven[1] * (Dgrbsq1m[(indx - v2 - 1) >> 1] + Dgrbsq1m[(indx - v2 + 1) >> 1] + Dgrbsq1m[(indx - 2 - v1) >> 1] + Dgrbsq1m[(indx + 2 - v1) >> 1] + Dgrbsq1m[(indx - 2 + v1) >> 1] + Dgrbsq1m[(indx + 2 + v1) >> 1] + Dgrbsq1m[(indx + v2 - 1) >> 1] + Dgrbsq1m[(indx + v2 + 1) >> 1]))
@@ -527,9 +528,9 @@ def amaze_denosaic_cpp(src, cfarray, daylight_wb):
 
             for rr in range(10, rr1-10):
                 for cc in range(10 + (fc(cfarray, rr, 2) & 1), cc1-10, 2):
-                    indx = rr * ts + cc
+                    indx = rr * TS + cc
                     indx1 = indx >> 1
-                    # first ask if one gets more directional discrimination from nearby B/R sites
+                    # first ask if one geTS more directional discrimination from nearby B/R sites
                     pmwtalt = 0.25 * (pmwt[(indx - m1) >> 1] + pmwt[(indx + p1) >> 1] + pmwt[(indx - p1) >> 1] + pmwt[(indx + m1) >> 1])
                     if abs(0.5 - pmwt[indx1]) < abs(0.5 - pmwtalt):
                         pmwt[indx1] = pmwtalt   # a better result was obtained from the neighbours
@@ -543,7 +544,7 @@ def amaze_denosaic_cpp(src, cfarray, daylight_wb):
                         continue
 
                     # now interpolate G vertically/horizontally using R+B values
-                    # unfortunately, since G interpolation cannot be done diagonally this may lead to colour shifts
+                    # unfortunately, since G interpolation cannot be done diagonally this may lead to colour shifTS
 
                     # colour ratios for G interpolation
                     cru = cfa[indx - v1] * 2 / (eps + rbint[indx1] + rbint[(indx1 - v1)])
@@ -572,9 +573,9 @@ def amaze_denosaic_cpp(src, cfarray, daylight_wb):
                     else:
                         gr = cfa[indx + 1] + 0.5 * (rbint[indx1] - rbint[(indx1 + 1)])
 
-                    # interpolated G via adaptive weights of cardinal evaluations
-                    Gintv = (dirwts0[indx - v1] * gd + dirwts0[indx + v1] * gu) / (dirwts0[indx + v1] + dirwts0[indx - v1])
-                    Ginth = (dirwts1[indx - 1] * gr + dirwts1[indx + 1] * gl) / (dirwts1[indx - 1] + dirwts1[indx + 1])
+                    # interpolated G via adaptive weighTS of cardinal evaluations
+                    Gintv = (dirwTS0[indx - v1] * gd + dirwTS0[indx + v1] * gu) / (dirwTS0[indx + v1] + dirwTS0[indx - v1])
+                    Ginth = (dirwTS1[indx - 1] * gr + dirwTS1[indx + 1] * gl) / (dirwTS1[indx - 1] + dirwTS1[indx + 1])
 
                     # bound the interpolation in regions of high saturation
                     if Gintv < rbint[indx1]:
@@ -605,7 +606,7 @@ def amaze_denosaic_cpp(src, cfarray, daylight_wb):
             # fancy chrominance interpolation
             # (ey,ex) is location of R site
             for rr in range(13-ey, rr1-12, 2):
-                for indx1 in range((rr * ts + 13 - ex) >> 1, (rr * ts + cc1 - 12) >> 1):
+                for indx1 in range((rr * TS + 13 - ex) >> 1, (rr * TS + cc1 - 12) >> 1):
                     # B coset
                     Dgrb[1, indx1] = Dgrb[0][indx1]; # split out G-B from G-R
                     Dgrb[0, indx1] = 0
@@ -613,13 +614,13 @@ def amaze_denosaic_cpp(src, cfarray, daylight_wb):
             for rr in range(14, rr1 - 14):
                 c = int(1 - fc(cfarray, rr, 14 + (fc(cfarray, rr, 2) & 1)) / 2)
                 for cc in range(14 + (fc(cfarray, rr, 2) & 1), cc1 - 14, 2):
-                    indx = rr * ts + cc
+                    indx = rr * TS + cc
                     wtnw = 1 / (eps + abs(Dgrb[c, (indx - m1) >> 1] - Dgrb[c, (indx + m1) >> 1]) + abs(Dgrb[c, (indx - m1) >> 1] - Dgrb[c, (indx - m3) >> 1]) + abs(Dgrb[c, (indx + m1) >> 1] - Dgrb[c, (indx - m3) >> 1]))
                     wtne = 1 / (eps + abs(Dgrb[c, (indx + p1) >> 1] - Dgrb[c, (indx - p1) >> 1]) + abs(Dgrb[c, (indx + p1) >> 1] - Dgrb[c, (indx + p3) >> 1]) + abs(Dgrb[c, (indx - p1) >> 1] - Dgrb[c, (indx + p3) >> 1]))
-                    wtsw = 1 / (eps + abs(Dgrb[c, (indx - p1) >> 1] - Dgrb[c, (indx + p1) >> 1]) + abs(Dgrb[c, (indx - p1) >> 1] - Dgrb[c, (indx + m3) >> 1]) + abs(Dgrb[c, (indx + p1) >> 1] - Dgrb[c, (indx - p3) >> 1]))
-                    wtse = 1 / (eps + abs(Dgrb[c, (indx + m1) >> 1] - Dgrb[c, (indx - m1) >> 1]) + abs(Dgrb[c, (indx + m1) >> 1] - Dgrb[c, (indx - p3) >> 1]) + abs(Dgrb[c, (indx - m1) >> 1] - Dgrb[c, (indx + m3) >> 1]))
+                    wTSw = 1 / (eps + abs(Dgrb[c, (indx - p1) >> 1] - Dgrb[c, (indx + p1) >> 1]) + abs(Dgrb[c, (indx - p1) >> 1] - Dgrb[c, (indx + m3) >> 1]) + abs(Dgrb[c, (indx + p1) >> 1] - Dgrb[c, (indx - p3) >> 1]))
+                    wTSe = 1 / (eps + abs(Dgrb[c, (indx + m1) >> 1] - Dgrb[c, (indx - m1) >> 1]) + abs(Dgrb[c, (indx + m1) >> 1] - Dgrb[c, (indx - p3) >> 1]) + abs(Dgrb[c, (indx - m1) >> 1] - Dgrb[c, (indx + m3) >> 1]))
 
-                    Dgrb[c, indx >> 1] = (wtnw * (1.325 * Dgrb[c, (indx - m1) >> 1] - 0.175 * Dgrb[c, (indx - m3) >> 1] - 0.075 * Dgrb[c, (indx - m1 - 2) >> 1] - 0.075 * Dgrb[c, (indx - m1 - v2) >> 1] ) + wtne * (1.325 * Dgrb[c, (indx + p1) >> 1] - 0.175 * Dgrb[c, (indx + p3) >> 1] - 0.075 * Dgrb[c, (indx + p1 + 2) >> 1] - 0.075 * Dgrb[c, (indx + p1 + v2) >> 1] ) + wtsw * (1.325 * Dgrb[c, (indx - p1) >> 1] - 0.175 * Dgrb[c, (indx - p3) >> 1] - 0.075 * Dgrb[c, (indx - p1 - 2) >> 1] - 0.075 * Dgrb[c, (indx - p1 - v2) >> 1] ) + wtse * (1.325 * Dgrb[c, (indx + m1) >> 1] - 0.175 * Dgrb[c, (indx + m3) >> 1] - 0.075 * Dgrb[c, (indx + m1 + 2) >> 1] - 0.075 * Dgrb[c, (indx + m1 + v2) >> 1] )) / (wtnw + wtne + wtsw + wtse)
+                    Dgrb[c, indx >> 1] = (wtnw * (1.325 * Dgrb[c, (indx - m1) >> 1] - 0.175 * Dgrb[c, (indx - m3) >> 1] - 0.075 * Dgrb[c, (indx - m1 - 2) >> 1] - 0.075 * Dgrb[c, (indx - m1 - v2) >> 1] ) + wtne * (1.325 * Dgrb[c, (indx + p1) >> 1] - 0.175 * Dgrb[c, (indx + p3) >> 1] - 0.075 * Dgrb[c, (indx + p1 + 2) >> 1] - 0.075 * Dgrb[c, (indx + p1 + v2) >> 1] ) + wTSw * (1.325 * Dgrb[c, (indx - p1) >> 1] - 0.175 * Dgrb[c, (indx - p3) >> 1] - 0.075 * Dgrb[c, (indx - p1 - 2) >> 1] - 0.075 * Dgrb[c, (indx - p1 - v2) >> 1] ) + wTSe * (1.325 * Dgrb[c, (indx + m1) >> 1] - 0.175 * Dgrb[c, (indx + m3) >> 1] - 0.075 * Dgrb[c, (indx + m1 + 2) >> 1] - 0.075 * Dgrb[c, (indx + m1 + v2) >> 1] )) / (wtnw + wtne + wTSw + wTSe)
 
             for rr in range(16, rr1-16):
                 row = rr + top
@@ -627,7 +628,7 @@ def amaze_denosaic_cpp(src, cfarray, daylight_wb):
 
                 if (fc(cfarray, rr, 2) & 1) == 1:
 
-                    for indx in range(rr * ts + 16, rr * ts + cc1 - 16 - (cc1 & 1), 2):
+                    for indx in range(rr * TS + 16, rr * TS + cc1 - 16 - (cc1 & 1), 2):
 
                         temp =  1 / (hvwt[(indx - v1) >> 1] + 2 - hvwt[(indx + 1) >> 1] - hvwt[(indx - 1) >> 1] + hvwt[(indx + v1) >> 1])
 
@@ -653,7 +654,7 @@ def amaze_denosaic_cpp(src, cfarray, daylight_wb):
                 
                 else:
 
-                    for indx in range(rr * ts + 16, rr * ts + cc1 - 16 - (cc1 & 1), 2):
+                    for indx in range(rr * TS + 16, rr * TS + cc1 - 16 - (cc1 & 1), 2):
 
                         RGB[row, col, 0] = max(0, 65535 * (rgbgreen[indx] - Dgrb[0, indx >> 1]))
                         RGB[row, col, 2] = max(0, 65535 * (rgbgreen[indx] - Dgrb[1, indx >> 1]))
@@ -671,12 +672,41 @@ def amaze_denosaic_cpp(src, cfarray, daylight_wb):
                         RGB[row, col, 0] = max(0, 65535 * (rgbgreen[indx] - Dgrb[0, indx >> 1]))
                         RGB[row, col, 2] = max(0, 65535 * (rgbgreen[indx] - Dgrb[1, indx >> 1]))
 
-            # copy smoothed results back to image matrix
+            # copy smoothed resulTS back to image matrix
             for rr in range(16, rr1 - 16):
                 row = rr + top
 
                 for cc in range(16, cc1-16):
-                    RGB[row, cc+left, 1] = max(0, 65535 * rgbgreen[rr * ts + cc])
+                    RGB[row, cc+left, 1] = max(0, 65535 * rgbgreen[rr * TS + cc])
 
     return RGB
 
+def amaze_demosaic_libraw(src, cfarray, daylight_wb):
+
+    TS = 512
+    winx = winy = 0
+    width = src.shape[1]
+    height = src.shape[0]
+    clip_pt = min(daylight_wb[0], daylight_wb[1], daylight_wb[2])
+
+    v1 = TS
+    v2 = 2 * TS
+    v3 = 3 * TS
+    p1 = -TS + 1
+    p2 = -2 * TS + 2
+    p3 = -3 * TS + 3
+    m1 = TS + 1 
+    m2 = 2 * TS + 2
+    m3 = 3 * TS + 3
+
+    nbr = [-v2,-2,2,v2,0]
+    eps, epssq = 1e-5, 1e-10
+
+    # adaptive ratios threshold
+    arthresh=0.75
+    # nyquist texture test threshold
+    nyqthresh=0.5
+    # diagonal interpolation test threshold
+    pmthresh=0.25
+    # factors for bounding interpolation in saturated regions
+    lbd, ubd = 1, 1 # lbd=0.66, ubd=1.5 alternative values;
