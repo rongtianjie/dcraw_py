@@ -70,6 +70,8 @@ The main ISP implementation is contained in
 
 - **bright_perc** (float) - If use auto bright, a brightest part of pixel will be set to pure white. The ratio is controled by `bright_prec` (Default: 0.01)
 
+- **use_pip** (bool) - When set to True, can directly use `pip` to install `rawpy`
+
 - **verbose** (bool) - Whether showing the progress log.
 
 ## Reference
