@@ -17,7 +17,7 @@
 
 The main ISP implementation is contained in 
  ```
- output = dcraw.postprocessing(rawData, use_rawpy_postprocessing = False, suffix = ".RAF", adjust_maximum_thr = 0.75, dark_frame = None, path = None, bad_pixel_fix = True, bayer_pattern = "RGGB", demosacing_method = 0, output_srgb = False, auto_bright = False, bright_perc = 0.01, crop_to_official = True, verbose = False)
+ output = dcraw.postprocessing(rawData, use_rawpy_postprocessing = False, suffix = ".RAF", adjust_maximum_thr = 0.75, dark_frame = None, path = None, bad_pixel_fix = True, bayer_pattern = "RGGB", demosacing_method = 0, output_srgb = False, auto_bright = False, bright_perc = 0.01, crop_to_official = True, use_pip = False, verbose = False)
  ```
 
 #### Parameters
