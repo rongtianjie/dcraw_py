@@ -11,13 +11,13 @@
  Simply import the `dcraw` library in your Python script.
 
  ```
- rawData = dcraw.imread(infile, path = None, suffix = ".RAF", verbose = False)
+ rawData = dcraw.imread(infile, path = None, suffix = ".RAF", use_pip = False, verbose = False)
  ``` 
  will return a `rawpy.RawPy` object. Almost the same as `rawpy.imread()`.
 
 The main ISP implementation is contained in 
  ```
- output = dcraw.postprocessing(rawData, use_rawpy_postprocessing = False, suffix = ".RAF", adjust_maximum_thr = 0.75, dark_frame = None, path = None, bad_pixel_fix = True, bayer_pattern = "RGGB", demosacing_method = 0, output_srgb = False, auto_bright = False, bright_perc = 0.01, crop_to_official = True, use_pip = False, verbose = False)
+ output = dcraw.postprocessing(rawData, use_rawpy_postprocessing = False, suffix = ".RAF", adjust_maximum_thr = 0.75, dark_frame = None, path = None, bad_pixel_fix = True, bayer_pattern = "RGGB", demosacing_method = 0, output_srgb = False, auto_bright = False, bright_perc = 0.01, crop_to_official = False, use_pip = False, verbose = False)
  ```
 
 #### Parameters
@@ -69,6 +69,8 @@ The main ISP implementation is contained in
 - **auto_bright** (bool) - Whether bright the image automatically. Default: False
 
 - **bright_perc** (float) - If use auto bright, a brightest part of pixel will be set to pure white. The ratio is controled by `bright_prec` (Default: 0.01)
+
+- **crop_to_official** (bool) - Whether crop the output into Fujifilm official size (Default: False)
 
 - **use_pip** (bool) - When set to True, can directly use `pip` to install `rawpy`
 
