@@ -67,7 +67,7 @@ if __name__ == "__main__":
     suffix = ".RAF"
     verbose = True
 
-    # This part is out of date
+    # This part is out-dated
     opts, args = getopt.getopt(sys.argv[1:], "-h-i:-p:-o:-v-K:",["help","path=","ifile=","ofile=","dark="])
 
     for opt, arg in opts:

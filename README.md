@@ -11,7 +11,7 @@
  Simply import the `dcraw` library in your Python script.
 
  ```
- rawData = dcraw.imread(infile, path = None, suffix = ".RAF", use_pip = False, verbose = False)
+ rawData = dcraw.imread(infile, path = None, suffix = ".RAF", verbose = False)
  ``` 
  will return a `rawpy.RawPy` object. Almost the same as `rawpy.imread()`.
 
