@@ -121,12 +121,15 @@ def blc(raw):
 
     return CLIP(rslt)
 
-def scale_colors(src, raw, verbose = False):
+def scale_colors(src, raw, use_pip, verbose = False):
     if APPLY_BLC:
         if src==None or src.shape != raw.raw_image_visible.shape:
             src_blc = blc(raw)
     else:
-        src_blc = raw.raw_image_visible.astype(np.int32)
+        if use_pip:
+            src_blc = raw.raw_image[2:8754, :11662].astype(np.int32)
+        else:
+            src_blc = raw.raw_image_visible.astype(np.int32)
 
     if verbose:
         print("Start white balance correction with camera setting.")
@@ -147,10 +150,16 @@ def scale_colors(src, raw, verbose = False):
     scale_coeff = wb_coeff * 65535 / white_level
     print("Scale coefficient is {}".format(scale_coeff))
 
-    scale_matrix = np.empty(raw.raw_colors_visible.shape, dtype=np.float32)
+    if use_pip:
+        scale_matrix = np.empty([8752, 11662], dtype=np.float32)
+    else:
+        scale_matrix = np.empty(raw.raw_colors_visible.shape, dtype=np.float32)
 
     for i, scale_co in  enumerate(scale_coeff):
-        scale_matrix[raw.raw_colors_visible == i] = scale_co
+        if use_pip:
+            scale_matrix[raw.raw_colors[2:8754, :11662] == i] = scale_co
+        else:
+            scale_matrix[raw.raw_colors_visible == i] = scale_co
     
     rslt = CLIP(src_blc * scale_matrix)
     
