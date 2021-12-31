@@ -13,7 +13,7 @@ def SQR(x):
 
 def amaze_demosaic(src, raw):
 
-    cfarray = raw.raw_pattern
+    cfarray = raw.raw_colors
     cfarray[cfarray == 3] = 1
 
     rgb = amaze_demosaic_libraw(src, cfarray, raw.daylight_whitebalance)
@@ -777,9 +777,12 @@ def amaze_demosaic_libraw(src, cfarray, daylight_wb):
         else: 
             ex = ey = 1
     
-
+    # Start main loop
+    loop_cnt = 1    
     for top in range(winy-16, winy+height, TS-32):
         for left in range(winx-16, winx+width, TS-32):
+            print("Loop [{}]: top: {} left: {}".format(loop_cnt, top, left))
+            loop_cnt += 1
             # location of tile bottom edge
             bottom = min(top+TS, winy+height+16)
             # location of tile right edge
@@ -1128,8 +1131,207 @@ def amaze_demosaic_libraw(src, cfarray, daylight_wb):
                         Dgrbv2[indx] = SQR(rgb[indx][1] - 0.5*(rgb[indx-v1][1]+rgb[indx+v1][1]))
                     else:
                         Dgrbh2[indx] = Dgrbv2[indx] = 0
-                        
+
             # end of standard interpolation
+
+
+            # refine Nyquist areas using G curvatures
+            for rr in range(8, rr1-8):
+                for cc in range(8+(cfarray[rr,2]&1), cc1-8, 2):
+                    indx = rr * TS + cc
+                    if nyquist[indx]:
+                        # local averages (over Nyquist pixels only) of G curvature squared 
+                        gvarh = epssq + (gquinc[0]*Dgrbh2[indx]+gquinc[1]*(Dgrbh2[indx-m1]+Dgrbh2[indx+p1]+Dgrbh2[indx-p1]+Dgrbh2[indx+m1])+gquinc[2]*(Dgrbh2[indx-v2]+Dgrbh2[indx-2]+Dgrbh2[indx+2]+Dgrbh2[indx+v2])+gquinc[3]*(Dgrbh2[indx-m2]+Dgrbh2[indx+p2]+Dgrbh2[indx-p2]+Dgrbh2[indx+m2]))
+                        gvarv = epssq + (gquinc[0]*Dgrbv2[indx]+gquinc[1]*(Dgrbv2[indx-m1]+Dgrbv2[indx+p1]+Dgrbv2[indx-p1]+Dgrbv2[indx+m1])+gquinc[2]*(Dgrbv2[indx-v2]+Dgrbv2[indx-2]+Dgrbv2[indx+2]+Dgrbv2[indx+v2])+gquinc[3]*(Dgrbv2[indx-m2]+Dgrbv2[indx+p2]+Dgrbv2[indx-p2]+Dgrbv2[indx+m2]))
+                        # use the results as weights for refined G interpolation
+                        Dgrb[indx][0] = (hcd[indx]*gvarv + vcd[indx]*gvarh)/(gvarv+gvarh)
+                        rgb[indx][1] = cfa[indx] + Dgrb[indx][0]
+            
+            # diagonal interpolation correction
+            for rr in range(8, rr1-8):
+                for cc in range(8+(cfarray[rr,2]&1), cc1-8, 2):
+                    indx = rr * TS + cc
+                    rbvarp = epssq + (gausseven[0]*(Dgrbpsq1[indx-v1]+Dgrbpsq1[indx-1]+Dgrbpsq1[indx+1]+Dgrbpsq1[indx+v1]) + gausseven[1]*(Dgrbpsq1[indx-v2-1]+Dgrbpsq1[indx-v2+1]+Dgrbpsq1[indx-2-v1]+Dgrbpsq1[indx+2-v1]+ Dgrbpsq1[indx-2+v1]+Dgrbpsq1[indx+2+v1]+Dgrbpsq1[indx+v2-1]+Dgrbpsq1[indx+v2+1]))
+                    rbvarm = epssq + (gausseven[0]*(Dgrbmsq1[indx-v1]+Dgrbmsq1[indx-1]+Dgrbmsq1[indx+1]+Dgrbmsq1[indx+v1]) + gausseven[1]*(Dgrbmsq1[indx-v2-1]+Dgrbmsq1[indx-v2+1]+Dgrbmsq1[indx-2-v1]+Dgrbmsq1[indx+2-v1]+ Dgrbmsq1[indx-2+v1]+Dgrbmsq1[indx+2+v1]+Dgrbmsq1[indx+v2-1]+Dgrbmsq1[indx+v2+1]))
+
+                    # diagonal color ratios
+                    crse=2*(cfa[indx+m1])/(eps+cfa[indx]+(cfa[indx+m2]))
+                    crnw=2*(cfa[indx-m1])/(eps+cfa[indx]+(cfa[indx-m2]))
+                    crne=2*(cfa[indx+p1])/(eps+cfa[indx]+(cfa[indx+p2]))
+                    crsw=2*(cfa[indx-p1])/(eps+cfa[indx]+(cfa[indx-p2]))
+
+                    # assign B/R at R/B sites
+                    if abs(1 - crse) < arthresh:
+                        rbse = cfa[indx] * crse
+                    else:
+                        rbse = cfa[indx + m1] + 0.5 * (cfa[indx] - cfa[indx + m2])
+
+                    if abs(1 - crnw) < arthresh:
+                        rbnw = (cfa[indx - m1]) + 0.5 *(cfa[indx] - cfa[indx - m2])
+
+                    if abs(1 - crne) < arthresh:
+                        rbne = cfa[indx] * crne
+                    else:
+                        rbne = (cfa[indx + p1]) + 0.5 * cfa[indx] - cfa[indx + p2]
+
+                    if abs(1 - crsw) < arthresh:
+                        rbsw = cfa[indx] * crsw
+                    else:
+                        rbsw = (cfa[indx - p1]) + 0.5 * (cfa[indx] - cfa[indx - p2])
+                    
+                    wtse= eps+delm[indx]+delm[indx+m1]+delm[indx+m2] # same as for wtu,wtd,wtl,wtr
+                    wtnw= eps+delm[indx]+delm[indx-m1]+delm[indx-m2]
+                    wtne= eps+delp[indx]+delp[indx+p1]+delp[indx+p2]
+                    wtsw= eps+delp[indx]+delp[indx-p1]+delp[indx-p2]
+
+                    rbm[indx] = (wtse*rbnw+wtnw*rbse)/(wtse+wtnw)
+                    rbp[indx] = (wtne*rbsw+wtsw*rbne)/(wtne+wtsw)
+
+                    pmwt[indx] = rbvarm/(rbvarp+rbvarm)
+
+                    # bound the interpolation in regions of high saturation
+                    if rbp[indx] < cfa[indx]:
+                        if 2 * (rbp[indx]) < cfa[indx]:
+                            rbp[indx] = np.median([rbp[indx] , cfa[indx - p1], cfa[indx + p1]])
+                        else:
+                            pwt = 2 * (cfa[indx] - rbp[indx]) / (eps + rbp[indx] + cfa[indx])
+                            rbp[indx] = pwt * rbp[indx] + (1 - pwt) * np.median([rbp[indx], cfa[indx - p1], cfa[indx + p1]])
+
+                    if rbm[indx] < cfa[indx]:
+                        if 2 * (rbm[indx]) < cfa[indx]:
+                            rbm[indx] = np.median([rbm[indx] , cfa[indx - m1], cfa[indx + m1]])
+                        else:
+                            mwt = 2 * (cfa[indx] - rbm[indx]) / (eps + rbm[indx] + cfa[indx])
+                            rbm[indx] = mwt * rbm[indx] + (1 - mwt) * np.median([rbm[indx], cfa[indx - m1], cfa[indx + m1]])
+
+                    if rbp[indx] > clip_pt:
+                        rbp[indx] = np.median([rbp[indx], cfa[indx - p1], cfa[indx + p1]])
+
+                    if rbm[indx] > clip_pt:
+                        rbm[indx] = np.median([rbm[indx], cfa[indx - m1], cfa[indx + m1]])
+
+            for rr in range(10, rr1-10):
+                for cc in range(10 + (cfarray[rr, 2]&1), cc1-10, 2):
+                    indx = rr * TS + cc
+                    
+                    # first ask if one geTS more directional discrimination from nearby B/R sites
+                    pmwtalt = 0.25*(pmwt[indx-m1]+pmwt[indx+p1]+pmwt[indx-p1]+pmwt[indx+m1])
+                    vo = abs(0.5-pmwt[indx])
+                    ve = abs(0.5-pmwtalt)
+                    if vo < ve:
+                        pmwt[indx] = pmwtalt
+                    rbint[indx] = 0.5*(cfa[indx] + rbm[indx]*(1-pmwt[indx]) + rbp[indx]*pmwt[indx])
+
+            for rr in range(12, rr1 - 12):
+                for cc in range(12 + (cfarray[rr, 2]&1), cc1 - 12, 2):
+                    indx = rr * TS + cc
+                    if abs(0.5 - pmwt[indx]) < abs(0.5 - hvwt[indx]):
+                        continue
+                    
+                    # now interpolate G vertically/horizontally using R+B values
+                    # unfortunately, since G interpolation cannot be done diagonally this may lead to colour shifts
+                    # colour ratios for G interpolation
+                    cru = cfa[indx-v1]*2/(eps+rbint[indx]+rbint[indx-v2])
+                    crd = cfa[indx+v1]*2/(eps+rbint[indx]+rbint[indx+v2])
+                    crl = cfa[indx-1]*2/(eps+rbint[indx]+rbint[indx-2])
+                    crr = cfa[indx+1]*2/(eps+rbint[indx]+rbint[indx+2])
+
+                    # interpolated G via adaptive ratios or Hamilton-Adams in each cardinal direction
+                    if abs(1 - cru) < arthresh:
+                        gu = rbint[indx] * cru
+                    else:
+                        gu = cfa[indx - v1] + 0.5 * (rbint[indx] - rbint[(indx - v1)])
+
+                    if abs(1 - crd) < arthresh:
+                        gd = rbint[indx] * crd
+                    else:
+                        gd = cfa[indx + v1] + 0.5 * (rbint[indx] - rbint[(indx + v1)])
+
+                    if abs(1 - crl) < arthresh:
+                        gl = rbint[indx] * crl
+                    else:
+                        gl = cfa[indx - 1] + 0.5 * (rbint[indx] - rbint[(indx - 1)])
+
+                    if abs(1 - crr) < arthresh:
+                        gr = rbint[indx] * crr
+                    else:
+                        gr = cfa[indx + 1] + 0.5 * (rbint[indx] - rbint[(indx + 1)])
+
+                    # interpolated G via adaptive weighTS of cardinal evaluations
+                    Gintv = (dirwts[indx - v1][0] * gd + dirwts[indx + v1][0] * gu) / (dirwts[indx + v1][0] + dirwts[indx - v1][0])
+                    Ginth = (dirwts[indx - 1][1] * gr + dirwts[indx + 1][1] * gl) / (dirwts[indx - 1][1] + dirwts[indx + 1][1])
+
+                    # bound the interpolation in regions of high saturation
+                    if Gintv < rbint[indx]:
+                        if (2 * Gintv < rbint[indx]):
+                            Gintv = np.median([Gintv , cfa[indx - v1], cfa[indx + v1]])
+                        else:
+                            vwt = 2 * (rbint[indx] - Gintv) / (eps + Gintv + rbint[indx])
+                            Gintv = vwt * Gintv + (1 - vwt) * np.median([Gintv, cfa[indx - v1], cfa[indx + v1]])
+
+                    if Ginth < rbint[indx]:
+                        if 2 * Ginth < rbint[indx]:
+                            Ginth = np.median([Ginth , cfa[indx - 1], cfa[indx + 1]])
+                        else:
+                            hwt = 2 * (rbint[indx] - Ginth) / (eps + Ginth + rbint[indx])
+                            Ginth = hwt * Ginth + (1 - hwt) * np.median([Ginth, cfa[indx - 1], cfa[indx + 1]])
+                    
+                    if Ginth > clip_pt:
+                        Ginth = np.median([Ginth, cfa[indx - 1], cfa[indx + 1]])
+
+                    if Gintv > clip_pt:
+                        Gintv = np.median([Gintv, cfa[indx - v1], cfa[indx + v1]])
+                    
+                    rgb[indx][1] = Ginth*(1-hvwt[indx]) + Gintv*hvwt[indx]
+                    Dgrb[indx][0] = rgb[indx][1]-cfa[indx]
+
+            # end of diagonal interpolation correction
+
+            # fancy chrominance interpolation
+            # (ey,ex) is location of R site
+            for rr in range(13-ey, rr1-12, 2):
+                for cc in range(13-ex, cc1-12, 2):
+                    indx = rr*TS+cc
+                    Dgrb[indx][1]=Dgrb[indx][0] # split out G-B from G-R
+                    Dgrb[indx][0]=0
+
+            for rr in range(12, rr1-12):
+                c = int(1- cfarray[rr, 12+(cfarray[rr,2]&1)]/2)
+                for cc in range(12+(cfarray[rr,2]&1), cc1-12, 2):
+                    indx = rr * TS + cc
+                    wtnw=1/(eps+abs(Dgrb[indx-m1][c]-Dgrb[indx+m1][c])+abs(Dgrb[indx-m1][c]-Dgrb[indx-m3][c])+abs(Dgrb[indx+m1][c]-Dgrb[indx-m3][c]))
+                    wtne=1/(eps+abs(Dgrb[indx+p1][c]-Dgrb[indx-p1][c])+abs(Dgrb[indx+p1][c]-Dgrb[indx+p3][c])+abs(Dgrb[indx-p1][c]-Dgrb[indx+p3][c]))
+                    wtsw=1/(eps+abs(Dgrb[indx-p1][c]-Dgrb[indx+p1][c])+abs(Dgrb[indx-p1][c]-Dgrb[indx+m3][c])+abs(Dgrb[indx+p1][c]-Dgrb[indx-p3][c]))
+                    wtse=1/(eps+abs(Dgrb[indx+m1][c]-Dgrb[indx-m1][c])+abs(Dgrb[indx+m1][c]-Dgrb[indx-p3][c])+abs(Dgrb[indx-m1][c]-Dgrb[indx+m3][c]))
+                    
+                    Dgrb[indx][c]=(wtnw*(1.325*Dgrb[indx-m1][c]-0.175*Dgrb[indx-m3][c]-0.075*Dgrb[indx-m1-2][c]-0.075*Dgrb[indx-m1-v2][c] )+ wtne*(1.325*Dgrb[indx+p1][c]-0.175*Dgrb[indx+p3][c]-0.075*Dgrb[indx+p1+2][c]-0.075*Dgrb[indx+p1+v2][c] )+ wtsw*(1.325*Dgrb[indx-p1][c]-0.175*Dgrb[indx-p3][c]-0.075*Dgrb[indx-p1-2][c]-0.075*Dgrb[indx-p1-v2][c] )+ wtse*(1.325*Dgrb[indx+m1][c]-0.175*Dgrb[indx+m3][c]-0.075*Dgrb[indx+m1+2][c]-0.075*Dgrb[indx+m1+v2][c] ))/(wtnw+wtne+wtsw+wtse)
+
+            for rr in range(12, rr1-12):
+                # c = int(cfarray[rr, 12+(cfarray[rr,1]&1)+1]/2)
+                for cc in range(12+(cfarray[rr,1]&1), cc1-12, 2):
+                    for c in range(2):
+                        Dgrb[indx][c]=((hvwt[indx-v1])*Dgrb[indx-v1][c]+(1-hvwt[indx+1])*Dgrb[indx+1][c]+(1-hvwt[indx-1])*Dgrb[indx-1][c]+(hvwt[indx+v1])*Dgrb[indx+v1][c])/((hvwt[indx-v1])+(1-hvwt[indx+1])+(1-hvwt[indx-1])+(hvwt[indx+v1]))
+
+            for rr in range(12, rr1-12):
+                for cc in range(12, cc1-12):
+                    indx = rr * TS + cc
+                    rgb[indx][0]=(rgb[indx][1]-Dgrb[indx][0])
+                    rgb[indx][2]=(rgb[indx][1]-Dgrb[indx][1])
+
+            
+            # copy smoothed results back to image matrix
+            for rr in range(16, rr1-16):
+                row = rr + top
+                for cc in range(16, cc1-16):
+                    col = cc + left
+                    indx = row * width + col
+
+                    for c in range(3):
+                        image[row, col, c] = int(rgb[rr*TS+cc, c] * 65535 + 0.5)
+    
+            # end of main loop
+    return image
+
 
 
 

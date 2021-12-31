@@ -121,7 +121,7 @@ def blc(raw):
 
     return CLIP(rslt)
 
-def scale_colors(src, raw, use_pip, verbose = False):
+def scale_colors(src, raw, use_pip = False, verbose = False):
     if APPLY_BLC:
         if src==None or src.shape != raw.raw_image_visible.shape:
             src_blc = blc(raw)
