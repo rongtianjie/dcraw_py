@@ -730,7 +730,6 @@ def amaze_demosaic_libraw(src, cfarray, daylight_wb):
     # guassian on quincunx grid
     gquinc = [0.169917, 0.108947, 0.069855, 0.0287182]
 
-    progress = 0.0
 
     rgb = np.empty([TS*TS, 3], dtype=np.float32)
     delh = np.empty(TS*TS, dtype=np.float32)
@@ -754,8 +753,6 @@ def amaze_demosaic_libraw(src, cfarray, daylight_wb):
     Dgrbv2 = np.empty(TS*TS, dtype=np.float32)
     dgintv = np.empty(TS*TS, dtype=np.float32)
     dginth = np.empty(TS*TS, dtype=np.float32)
-    Dgrbp1 = np.empty(TS*TS, dtype=np.float32)
-    Dgrbm1 = np.empty(TS*TS, dtype=np.float32)
     Dgrbpsq1 = np.empty(TS*TS, dtype=np.float32)
     Dgrbmsq1 = np.empty(TS*TS, dtype=np.float32)
     cfa = np.empty(TS*TS, dtype=np.float32)
