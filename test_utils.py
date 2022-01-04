@@ -75,6 +75,9 @@ def raw_info(raw):
     print("raw_colors")
     print(raw.raw_colors)
 
+    print("raw_colors_visible")
+    print(raw.raw_colors_visible)
+
     print("raw_pattern")
     print(raw.raw_pattern)
 

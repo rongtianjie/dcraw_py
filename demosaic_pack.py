@@ -96,13 +96,13 @@ def amaze_demosaic_libraw(src, cfarray, daylight_wb):
     nyquist = np.empty(TS*TS, dtype=np.int32)
 
     # determine GRBG coset; (ey,ex) is the offset of the R subarray
-    if fc(cfarray, 0, 0)== 1:
-        if fc(cfarray, 0, 1) == 0:
+    if cfarray[0][0] == 1:
+        if cfarray[0][1] == 0:
             ex, ey = 1, 0
         else:
             ex, ey = 0, 1
     else:
-        if fc(cfarray, 0, 0) == 0:
+        if cfarray[0][0] == 0:
             ex = ey = 0
         else: 
             ex = ey = 1
