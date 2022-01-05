@@ -21,7 +21,7 @@ The main ISP implementation is contained in
  ```
  For a simple usage for FujiFIlm GFX100S:
  ```
- output = dcraw.postprocessing(rawData, output_srgb = True, use_pip = False, verbose = True)
+ output = dcraw.postprocessing(rawData, use_pip = True, verbose = True)
  ```
 
 #### Parameters
