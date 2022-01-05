@@ -12,3 +12,5 @@ dcraw_test.py
 images
 sample.ipynb
 playground/setting_test.ipynb
+test.py
+*.pyc

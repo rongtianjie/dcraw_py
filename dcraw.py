@@ -2,14 +2,14 @@ import dcraw_utils
 import sys
 import getopt
 import os
-import image_utils
+from other.image_utils import findAllSuffix, findRawImage, save_image_16
 
 def imread(infile, path = None, suffix = ".RAF", verbose = False):
     if path == None:
         rawData = dcraw_utils.importRawImage(infile)
     else:
-        fileList = image_utils.FindAllSuffix(path, suffix, verbose)
-        infPath = image_utils.findRawImage(infile, fileList, suffix, verbose)
+        fileList = findAllSuffix(path, suffix, verbose)
+        infPath = findRawImage(infile, fileList, suffix, verbose)
         rawData = dcraw_utils.importRawImage(infPath)
     return rawData
 
@@ -23,7 +23,7 @@ def postprocessing(rawData, use_rawpy_postprocessing = False, suffix = ".RAF", a
     if path == None or bad_pixel_fix == False:
         rawData_badfix = rawData
     else:
-        fileList = image_utils.FindAllSuffix(path, suffix, verbose)
+        fileList = findAllSuffix(path, suffix, verbose)
         rawData_badfix = dcraw_utils.bad_fix(fileList, rawData, verbose)
     
     # dcraw_utils.adjust_maximum(rawData_badfix, adjust_maximum_thr)
@@ -37,12 +37,12 @@ def postprocessing(rawData, use_rawpy_postprocessing = False, suffix = ".RAF", a
     image_demosaiced = dcraw_utils.demosaicing(rawImage_wb, bayer_pattern, demosacing_method, verbose)
 
     if debug:
-        image_utils.save_image_16("debug_demosaiced.tiff", image_demosaiced)
+        save_image_16("debug_demosaiced.tiff", image_demosaiced)
 
     if output_srgb:
         output = dcraw_utils.camera_to_srgb(image_demosaiced, rawData_badfix, verbose)
         if debug:
-            image_utils.save_image_16("debug_srgb.tiff", output)
+            save_image_16("debug_srgb.tiff", output)
     else:
         output = image_demosaiced
 
@@ -102,6 +102,6 @@ if __name__ == "__main__":
 
     rgb = postprocessing(rawData, use_pip=True, verbose = verbose)
 
-    image_utils.save_image_16(outfn + ".tiff", rgb, verbose = verbose)
+    save_image_16(outfn + ".tiff", rgb, verbose = verbose)
 
     exit(0)

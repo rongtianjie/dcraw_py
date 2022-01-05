@@ -25,7 +25,7 @@ def save_image_16(outfn, src, verbose = False):
     if verbose:
         print("Write file to disk [{}]".format(outfn))
 
-def FindAllSuffix(path, suffix, verbose = False):
+def findAllSuffix(path, suffix, verbose = False):
     # Find all specific format of file under certain path
 
     # path: target path
