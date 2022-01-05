@@ -654,18 +654,12 @@ def amaze_demosaic_libraw(src, cfarray, daylight_wb):
                 row = rr + top
                 for cc in range(16, cc1-16):
                     col = cc + left
-                    indx = row * width + col
 
                     for c in range(3):
                         image[row, col, c] = int(rgb[rr*TS+cc, c] * 65535 + 0.5)
     
             # end of main loop
     return image
-
-
-
-
-
 
 
 

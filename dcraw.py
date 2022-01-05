@@ -61,7 +61,7 @@ if __name__ == "__main__":
 
     path = sys.path[0] + "/"
     # infn = ""
-    infn = "DSCF5420.RAF"
+    infn = "DSCF9329.RAF"
     if "." in infn:
         outfn = path + infn.split(".", 1)[0]
     suffix = ".RAF"
@@ -98,6 +98,8 @@ if __name__ == "__main__":
 
     rawData = imread(infn, path = path, verbose = verbose)
 
-    image_srgb = postprocessing(rawData, output_srgb = True, verbose = verbose, debug = True)
+    rgb = postprocessing(rawData, use_pip=True, verbose = verbose)
 
-    image_utils.save_image_16(outfn + "_srgb.tiff", image_srgb, verbose = verbose)
+    image_utils.save_image_16(outfn + ".tiff", rgb, verbose = verbose)
+
+    exit(0)

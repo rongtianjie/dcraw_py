@@ -107,24 +107,27 @@ def subtract(raw, dark_img, fileList = None, verbose = False):
     rslt = raw.raw_image_visible.astype(np.int32) - noise_floor
     return CLIP(rslt)
 
-def blc(raw):
+def blc(raw, use_pip):
     # BLC on raw image pattern
     # Input should be rawpy object
 
     # Output will be crop by rawpy "_visible" 
     # On GFX100S, image size is 8752 * 11662
-    
-    rslt = raw.raw_image_visible.astype(np.int32)
-
-    for i, bl in enumerate(raw.black_level_per_channel):
-        rslt[raw.raw_colors_visible == i] -= bl
+    if use_pip:
+        rslt = raw.raw_image[2:8754, :11662].astype(np.int32)
+        for i, bl in enumerate(raw.black_level_per_channel):
+            rslt[raw.raw_colors[2:8754, :11662] == i] -= bl
+    else:
+        rslt = raw.raw_image_visible.astype(np.int32)
+        for i, bl in enumerate(raw.black_level_per_channel):
+            rslt[raw.raw_colors_visible == i] -= bl
 
     return CLIP(rslt)
 
-def scale_colors(src, raw, use_pip = False, verbose = False):
+def scale_colors(src, raw, use_pip, verbose = False):
     if APPLY_BLC:
         if src==None or src.shape != raw.raw_image_visible.shape:
-            src_blc = blc(raw)
+            src_blc = blc(raw, use_pip)
     else:
         if use_pip:
             src_blc = raw.raw_image[2:8754, :11662].astype(np.int32)
