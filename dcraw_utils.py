@@ -151,7 +151,8 @@ def scale_colors(src, raw, use_pip, verbose = False):
     white_level = np.array(white_level) - np.array(raw.black_level_per_channel)
 
     scale_coeff = wb_coeff * 65535 / white_level
-    print("Scale coefficient is {}".format(scale_coeff))
+    if verbose:
+        print("Scale coefficient is {}".format(scale_coeff))
 
     if use_pip:
         scale_matrix = np.empty([8752, 11662], dtype=np.float32)

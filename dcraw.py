@@ -51,6 +51,8 @@ def postprocessing(rawData, use_rawpy_postprocessing = False, suffix = ".RAF", a
     
     if crop_to_official:
         output = dcraw_utils.crop_to_official_size(output, verbose = verbose)
+
+    print("Dcraw finished.")
     
     return output
 
