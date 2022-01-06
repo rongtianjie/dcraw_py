@@ -1,11 +1,10 @@
-
 import numpy as np
 import rawpy
 import rawpy.enhance
+import cam_data
 import colour_demosaicing
 import random
-from other.image_utils import findRawImage, rgb2gray, crop_image
-
+from other.image_utils import findAllSuffix, findRawImage, rgb2gray, crop_image
 
 # Define margin for raw data
 # Actural effiective resolution is 11664 x 8749
@@ -13,9 +12,6 @@ raw_top = 1
 raw_bottom = 4
 raw_left = 0
 raw_right = 144
-
-# Define default pixel max value
-maximum = 65535
 
 # sRGB to XYZ matrix
 # From http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
@@ -27,18 +23,24 @@ xyz_srgb = np.array([[0.4124564, 0.3575761, 0.1804375],
 # xyz_srgb = colour.models.RGB_COLOURSPACE_sRGB.RGB_to_XYZ_matrix
 d65_white = np.array([0.95047, 1, 1.08883])
 
-# Crop information
-# Used to crop the image from libraw size to official size
-# GFX100S official image size is 11648 x 8736 (libraw: 11662 x 8752)
-class Crop_DB:
-    def __init__(self, top_margin, bottom_margin, left_margin, right_margin):
-        self.top = top_margin
-        self.bottom = bottom_margin
-        self.left = left_margin
-        self.right = right_margin
-crop_GFX100S = Crop_DB(5, 11, 8, 6)
 
-APPLY_BLC = True
+class rawData:
+    def __init__(self, blpc, wlpc, cwb, cd, cm, dwb, nc, rc, ri, rp, rt, rgbxyz, sizes, tc, wl):
+        self.black_level_per_channel = blpc
+        self.camera_white_level_per_channel = wlpc
+        self.camera_whitebalance = cwb
+        self.color_desc = cd
+        self.color_matrix = cm
+        self.daylight_whitebalance = dwb
+        self.num_colors = nc
+        self.raw_colors = rc
+        self.raw_image = ri
+        self.raw_pattern = rp
+        self.raw_type = rt
+        self.rgb_xyz_matrix = rgbxyz
+        self.sizes = sizes
+        self.tone_curve = tc
+        self.white_level = wl
 
 def CLIP(src):
     rslt = src.copy()
@@ -47,103 +49,79 @@ def CLIP(src):
     return rslt
 
 def importRawImage(infPath):
+
     return rawpy.imread(infPath)
 
-def bad_fix(fileList, rawData, verbose = False):
+    
+
+def bad_fix(fileList, rawData, verbose):
     # Fix bad pixels with rawpy.enhance
 
     # Input the rawpy object and image list
     # return a rawpy object with bad pixel fixed 
     if len(fileList) >= 1:
+
+        if verbose:
+            print("Starting bad pixel fixing.")
+
         if len(fileList) <= 10:
             sample_num = len(fileList)
         else:
             sample_num = min(10, len(fileList)//2)
 
-        if verbose:
-            print("Starting bad pixel fixing.")
-
         blc_sample = random.sample(fileList, sample_num)
 
         if verbose:
-            print("Finding bad pixel using {} images...".format(sample_num))
+            print("Finding bad pixel using {} image(s)...".format(sample_num))
             
         bad_list = rawpy.enhance.find_bad_pixels(blc_sample, find_hot=True, find_dead=False, confirm_ratio=0.9)
         
         if verbose:
             print("Found {} bad pixels:".format(len(bad_list)))
-            # print(bad_list)
         
         rawpy.enhance.repair_bad_pixels(rawData, bad_list, method='median')
+        
         if verbose:
             print("Bad pixel fixing finished.\n")
+
     return rawData
 
-def adjust_maximum(raw, maximum_thr):
-    global maximum
-    real_max = raw.raw_image_visible.max()
-    if real_max > 0 and real_max < maximum and real_max > maximum * maximum_thr:
-        maximum = real_max
+def overwrite_imagedata(r, cam_model):
 
-def subtract(raw, dark_img, fileList = None, verbose = False):
-    # subtract dark frame to remove noise floor
-    # Input: bayer pattern image, dark frame filename,
-    if verbose:
-        print("Subtraction using dark frame...")
-
-    if fileList == None:
-        darkData = importRawImage(dark_img)
+    if cam_model == "GFX100S":
+        data = cam_data.GFX100S()
+        raw = rawData(data.black_level_per_channel, r.camera_white_level_per_channel, data.camera_whitebalance, data.color_desc, r.color_matrix, data.daylight_whitebalance, data.num_colors, r.raw_colors, r.raw_image, data.raw_pattern, r. raw_type, data.rgb_xyz_matrix, data.sizes, data.tone_curve, data.white_level)
     else:
-        infPath = findRawImage(dark_img, fileList, ".RAF", verbose)
-        darkData = importRawImage(infPath)
+        raw = r
+    
+    return raw
 
-    darkData_badfix = bad_fix([infPath], darkData, verbose)
-    noise_floor = darkData_badfix.raw_image_visible.max()
-
-    if verbose:
-        print("The noise floor is {}\n".format(noise_floor))
-
-    rslt = raw.raw_image_visible.astype(np.int32) - noise_floor
-    return CLIP(rslt)
-
-def blc(raw, use_pip):
+def blc(raw):
     # BLC on raw image pattern
     # Input should be rawpy object
 
     # Output will be crop by rawpy "_visible" 
     # On GFX100S, image size is 8752 * 11662
-    if use_pip:
-        rslt = raw.raw_image[2:8754, :11662].astype(np.int32)
-        for i, bl in enumerate(raw.black_level_per_channel):
-            rslt[raw.raw_colors[2:8754, :11662] == i] -= bl
-    else:
-        rslt = raw.raw_image_visible.astype(np.int32)
-        for i, bl in enumerate(raw.black_level_per_channel):
-            rslt[raw.raw_colors_visible == i] -= bl
+
+    rslt = raw.raw_image[raw.sizes.top_margin:raw.sizes.top_margin+raw.sizes.iheight, raw.sizes.left_margin:raw.sizes.left_margin+raw.sizes.iwidth](np.int32)
+    for i, bl in enumerate(raw.black_level_per_channel):
+        rslt[raw.raw_colors[raw.sizes.top_margin:raw.sizes.top_margin+raw.sizes.iheight, raw.sizes.left_margin:raw.sizes.left_margin+raw.sizes.iwidth] == i] -= bl
 
     return CLIP(rslt)
 
-def scale_colors(src, raw, use_pip, verbose = False):
-    if APPLY_BLC:
-        if src==None or src.shape != raw.raw_image_visible.shape:
-            src_blc = blc(raw, use_pip)
-    else:
-        if use_pip:
-            src_blc = raw.raw_image[2:8754, :11662].astype(np.int32)
-        else:
-            src_blc = raw.raw_image_visible.astype(np.int32)
-
+def scale_colors(src, raw, verbose):
     if verbose:
         print("Start white balance correction with camera setting.")
+
     wb = raw.camera_whitebalance
     wb_coeff = np.asarray(wb[:3]) / max(wb[:3])
     wb_coeff = np.append(wb_coeff,wb_coeff[1])
 
     if verbose:
         print("WB coefficient is {}".format(wb_coeff))
-
+    
     if raw.camera_white_level_per_channel is None:
-        white_level = [maximum] * 4
+        white_level = [65535] * 4
     else:
         white_level = raw.camera_white_level_per_channel
     
@@ -153,47 +131,43 @@ def scale_colors(src, raw, use_pip, verbose = False):
     if verbose:
         print("Scale coefficient is {}".format(scale_coeff))
 
-    if use_pip:
-        scale_matrix = np.empty([8752, 11662], dtype=np.float32)
-    else:
-        scale_matrix = np.empty(raw.raw_colors_visible.shape, dtype=np.float32)
+    scale_matrix = np.empty([raw.sizes.iheight, raw.sizes.iwidth], dtype=np.float32)
 
     for i, scale_co in  enumerate(scale_coeff):
-        if use_pip:
-            scale_matrix[raw.raw_colors[2:8754, :11662] == i] = scale_co
-        else:
-            scale_matrix[raw.raw_colors_visible == i] = scale_co
-    
-    rslt = CLIP(src_blc * scale_matrix)
-    
+        scale_matrix[raw.raw_colors[raw.sizes.top_margin:raw.sizes.top_margin+raw.sizes.iheight, raw.sizes.left_margin:raw.sizes.left_margin+raw.sizes.iwidth] == i] = scale_co
+
+    rslt = CLIP(src * scale_matrix)
+
     if verbose:
         print("White balance finished.\n")
 
-    return rslt
-
+    return rslt.astype(np.uint16)
 
 def demosaicing(src, Bayer_Pattern, DEMOSACING_METHOD = 0, verbose = False):
-    # Demosaicing. Default using bilinear
+    # Demosaicing. Default using colour_demosaicing.demosaicing_CFA_Bayer_bilinear
     if verbose:
         print("Start demosaicing.")
 
-    numbers = {
-    0 : colour_demosaicing.demosaicing_CFA_Bayer_bilinear, 
-    1 : colour_demosaicing.demosaicing_CFA_Bayer_Malvar2004, 
-    2 : colour_demosaicing.demosaicing_CFA_Bayer_Menon2007
-    # Menon2007 needs more than 20 GB memory
-    }
+    if DEMOSACING_METHOD < 3:
+        numbers = {
+        0 : colour_demosaicing.demosaicing_CFA_Bayer_bilinear, 
+        1 : colour_demosaicing.demosaicing_CFA_Bayer_Malvar2004, 
+        2 : colour_demosaicing.demosaicing_CFA_Bayer_Menon2007
+        # Menon2007 needs more than 20 GB memory
+        }
+        method = numbers.get(DEMOSACING_METHOD, colour_demosaicing.demosaicing_CFA_Bayer_bilinear )
 
-    method = numbers.get(DEMOSACING_METHOD, colour_demosaicing.demosaicing_CFA_Bayer_bilinear )
+        if verbose:
+            print("Demosacing using [{}]...".format(method))
+        rslt = method(src, Bayer_Pattern)
 
-    if verbose:
-        print("Demosacing using [{}]...".format(method))
-    rslt = method(src, Bayer_Pattern)
-
+    else:
+        print("Can not find the DEMOSACING_METHOD.")
+    
     if verbose:
         print("Demosacing finished.\n")
 
-    return rslt.astype(np.uint16)
+    return CLIP(rslt).astype(np.uint16)
 
 def cam_rgb_coeff(cam_xyz):
     # cam_xyz is used to convert color space from XYZ to camera RGB
@@ -202,7 +176,7 @@ def cam_rgb_coeff(cam_xyz):
     # Normalize cam_rgb
     cam_rgb_norm = (cam_rgb.T / cam_rgb.sum(axis = 1)).T 
     return cam_rgb_norm
-    
+
 def camera_to_srgb(src, raw, verbose = False):
     if verbose:
         print("Start camera rgb to srgb conversion...")
@@ -253,8 +227,9 @@ def auto_bright(image_srgb, perc = 0.01, verbose = False):
         print("Auto bright finished.")
     return CLIP(image_bright).astype(np.uint16)
 
-def crop_to_official_size(img, model = "GFX100S", verbose = False):
-    if model == "GFX100S":
+def crop_to_official_size(img, cam_model, verbose = False):
+    if cam_model == "GFX100S":
+        crop_GFX100S = cam_data.CROP_GFX100S()
         rslt = crop_image(img, crop_GFX100S.top, crop_GFX100S.bottom, crop_GFX100S.left, crop_GFX100S.right)
         if verbose:
             print("Output image size is {} x {}".format(rslt.shape[1], rslt.shape[0]))
