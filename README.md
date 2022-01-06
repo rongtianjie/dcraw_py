@@ -2,9 +2,9 @@
 
 ## Introduction
 
- A self modified raw image decode work flow based on rawpy
+ A self modified raw image decoder using rawpy to unpack the raw file.
 
- For now, the script is designed for FujiFilm GFX100S
+ For now, the script support FujiFilm GFX100S
 
 ## Usage
 
@@ -21,7 +21,7 @@ The main ISP implementation is contained in
  ```
  For a simple usage for FujiFIlm GFX100S:
  ```
- output = dcraw.postprocessing(rawData, use_pip = True, verbose = True)
+ output = dcraw.postprocessing(rawData, cam_model = "GFX100S")
  ```
 
 #### Parameters
@@ -30,6 +30,14 @@ The main ISP implementation is contained in
     - if `path` is defined, the `infile` do not have to containe the whole file path. The script will automatically search all the files under `path` matches the `path` including the subfolders. If there are multiple files match the keyword, the script will launch a choosen selection prompt.
 
     - if `path` is not defined (default None), the `infile` should be the absolute path or relative path to the script.
+
+- **path** (str) - The root path of all the image files. This parameter has 2 functions:
+
+    - It can be used in the searching for the absolute file path, including the input image and dark frame.
+
+    - The images used for bad pixel removal will be randomly selected from this folder.
+
+- **suffix** (str) - The suffix for the image file. ".RAF" for Fujifilm cameras.
 
 - **use_rawpy_postprocessing** (bool) - Whether use rawpy built-in postprocessing.
 
@@ -40,14 +48,6 @@ The main ISP implementation is contained in
     - Output 16-bit image
 
     - Use camera white balance setting
-
-- **path** (str) - The root path of all the image files. This parameter has 2 functions:
-
-    - It can be used in the searching for the absolute file path, including the input image and dark frame.
-
-    - The images used for bad pixel removal will be randomly selected from this folder.
-
-- **suffix** (str) - The suffix for the image file. ".RAF" for Fujifilm cameras.
 
 - **bad_pixel_fix** (bool) - Whether apply the bad pixel fix module. Requiring determining the `path` parameter.
 
@@ -69,7 +69,9 @@ The main ISP implementation is contained in
 - **crop_to_official** (bool) - Whether crop the output into Camera official size (Default: False)
 
 - **cam_model** (str) - Whether use the pre-defined raw image parameters. (Default: None)
-    Current support cameras:
+
+    **Current support cameras**:
+
     - FujiFilm GFX100S ("GFX100S")
 
 - **verbose** (bool) - Whether showing the progress log.
