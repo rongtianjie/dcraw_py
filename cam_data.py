@@ -36,7 +36,7 @@ def GFX100S():
     data = camData()
     data.black_level_per_channel = [255, 255, 255, 255]
     data.camera_whitebalance = [592.0, 302.0, 471.0, 0.0]
-    data.color_desc = "RGBG"
+    data.color_desc = b'RGBG'
     data.daylight_whitebalance = [1.9002734422683716, 0.945999801158905, 1.3716827630996704, 0.0]
     data.num_colors = 3
     data.raw_pattern = [[0, 1], [3, 2]]

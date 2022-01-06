@@ -17,7 +17,7 @@
 
 The main ISP implementation is contained in 
  ```
- output = dcraw.postprocessing(rawData, use_rawpy_postprocessing = False, suffix = ".RAF", adjust_maximum_thr = 0.75, dark_frame = None, path = None, bad_pixel_fix = True, bayer_pattern = "RGGB", demosacing_method = 0, output_srgb = False, auto_bright = False, bright_perc = 0.01, crop_to_official = False, use_pip = False, verbose = False)
+ output = dcraw.postprocessing(rawData, use_rawpy_postprocessing = False, suffix = ".RAF", path = None, bad_pixel_fix = True, demosacing_method = 0, output_srgb = False, auto_bright = False, bright_perc = None, crop_to_official = False, cam_model = None, verbose = False)
  ```
  For a simple usage for FujiFIlm GFX100S:
  ```
@@ -49,14 +49,7 @@ The main ISP implementation is contained in
 
 - **suffix** (str) - The suffix for the image file. ".RAF" for Fujifilm cameras.
 
-- **adjust_maximum_thr** (float) - See libraw docs. [Here](https://www.libraw.org/docs/API-datastruct-eng.html#libraw_output_params_t)
-
-- **dark_frame** (str) - The dark frame filename. Used to remove the noise floor. Similar to `infile`, file path also can be auto generated with path defined.
-
 - **bad_pixel_fix** (bool) - Whether apply the bad pixel fix module. Requiring determining the `path` parameter.
-
-- **bayer_pattern** (str) - The bayer pattern of camera cmos.
-    > The original cmos bayer pattern of Fujifilm GFX100S is "GBRG". However, it turns to "RGGB" after the raw image data is cropped by "_visible".
 
 - **demosacing_method** (int) - Default: 0 - bilinear
     - 0 - colour_demosaicing.demosaicing_CFA_Bayer_bilinear
@@ -68,15 +61,16 @@ The main ISP implementation is contained in
         > Menon2007 needs more than 20 GB memory.
 
 - **output_srgb** (bool) - Whether output srgb color space. Default: False
-    - If set to "True", the functurn will return 2 values [linear, srgb]
 
 - **auto_bright** (bool) - Whether bright the image automatically. Default: False
 
-- **bright_perc** (float) - If use auto bright, a brightest part of pixel will be set to pure white. The ratio is controled by `bright_prec` (Default: 0.01)
+- **bright_perc** (float) - If use auto bright, a brightest part of pixel will be set to pure white. The ratio is controled by `bright_prec` (Default: None, Recommend: 0.01)
 
-- **crop_to_official** (bool) - Whether crop the output into Fujifilm official size (Default: False)
+- **crop_to_official** (bool) - Whether crop the output into Camera official size (Default: False)
 
-- **use_pip** (bool) - When set to True, can directly use `pip` to install `rawpy`
+- **cam_model** (str) - Whether use the pre-defined raw image parameters. (Default: None)
+    Current support cameras:
+    - FujiFilm GFX100S ("GFX100S")
 
 - **verbose** (bool) - Whether showing the progress log.
 

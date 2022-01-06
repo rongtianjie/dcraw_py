@@ -25,7 +25,7 @@ def save_image_16(outfn, src, verbose = False):
     if verbose:
         print("Write file to disk [{}]".format(outfn))
 
-def findAllSuffix(path, suffix, verbose = False):
+def findAllSuffix(path, suffix, verbose):
     # Find all specific format of file under certain path
 
     # path: target path
@@ -45,10 +45,11 @@ def findAllSuffix(path, suffix, verbose = False):
                 result.append(file_path)
                 if verbose:
                     print(file_path)
-    print("Find {} [{}] files under [{}].\n".format(len(result), suffix, path))
+    if verbose:
+        print("Find {} [{}] files under [{}].\n".format(len(result), suffix, path))
     return result
 
-def findRawImage(infn, fileList, suffix, verbose = False):
+def findRawImage(infn, fileList, suffix, verbose):
     # Import the raw data of the image with rawpy.imread()
     #
     # Input the filename and the search field path list

@@ -1,4 +1,4 @@
-import dcraw_utils
+from dcraw_utils import *
 import sys
 import getopt
 import os
@@ -6,14 +6,14 @@ from other.image_utils import findAllSuffix, findRawImage, save_image_16
 
 def imread(infile, path = None, suffix = ".RAF", verbose = False):
     if path == None:
-        rawData = dcraw_utils.importRawImage(infile)
+        rawData = importRawImage(infile)
     else:
         fileList = findAllSuffix(path, suffix, verbose)
         infPath = findRawImage(infile, fileList, suffix, verbose)
-        rawData = dcraw_utils.importRawImage(infPath)
+        rawData = importRawImage(infPath)
     return rawData
 
-def postprocessing(rawData, use_rawpy_postprocessing = False, suffix = ".RAF", adjust_maximum_thr = 0.75, dark_frame = None, path = None, bad_pixel_fix = True, bayer_pattern = "RGGB", demosacing_method = 0, output_srgb = False, auto_bright = False, bright_perc = 0.01, crop_to_official = False, use_pip = False, verbose = False):
+def postprocessing(rawData, use_rawpy_postprocessing = False, suffix = ".RAF", path = None, bad_pixel_fix = True, demosacing_method = 0, output_srgb = False, auto_bright = False, bright_perc = None, crop_to_official = False, cam_model = None, verbose = False):
     
     debug = False
 
@@ -24,40 +24,37 @@ def postprocessing(rawData, use_rawpy_postprocessing = False, suffix = ".RAF", a
         rawData_badfix = rawData
     else:
         fileList = findAllSuffix(path, suffix, verbose)
-        rawData_badfix = dcraw_utils.bad_fix(fileList, rawData, verbose)
-    
-    # dcraw_utils.adjust_maximum(rawData_badfix, adjust_maximum_thr)
+        rawData_badfix = bad_fix(rawData, fileList, verbose)
 
-    if dark_frame == None:
-        rawImage_wb = dcraw_utils.scale_colors(None, rawData_badfix, use_pip, verbose)
-    else:
-        img_sub = dcraw_utils.subtract(rawData_badfix, dark_frame, fileList, verbose)
-        rawImage_wb = dcraw_utils.scale_colors(img_sub, rawData_badfix, verbose)
+    rawData = overwrite_imagedata(rawData_badfix, cam_model, verbose)
+
+    rawImage_blc = blc(rawData)
+
+    rawImage_wb = scale_colors(rawImage_blc, rawData, verbose)
     
-    image_demosaiced = dcraw_utils.demosaicing(rawImage_wb, bayer_pattern, demosacing_method, verbose)
+    image_demosaiced = demosaicing(rawImage_wb, rawData.color_desc, demosacing_method, verbose)
 
     if debug:
         save_image_16("debug_demosaiced.tiff", image_demosaiced)
 
     if output_srgb:
-        output = dcraw_utils.camera_to_srgb(image_demosaiced, rawData_badfix, verbose)
+        output = camera_to_srgb(image_demosaiced, rawData.rgb_xyz_matrix, verbose)
         if debug:
             save_image_16("debug_srgb.tiff", output)
     else:
         output = image_demosaiced
 
     if auto_bright:
-        output = dcraw_utils.auto_bright(output, bright_perc, verbose)
+        output = auto_bright(output, bright_perc, rawData.white_level, verbose)
+        if debug:
+            save_image_16("autobright_srgb.tiff", output)
     
     if crop_to_official:
-        output = dcraw_utils.crop_to_official_size(output, verbose = verbose)
+        output = crop_to_official_size(output, verbose)
 
     print("Dcraw finished.")
     
-    return output
-
-
-        
+    return output 
 
 if __name__ == "__main__":
 
@@ -100,7 +97,7 @@ if __name__ == "__main__":
 
     rawData = imread(infn, path = path, verbose = verbose)
 
-    rgb = postprocessing(rawData, use_pip=True, verbose = verbose)
+    rgb = postprocessing(rawData, cam_model = "GFX100S", verbose = verbose)
 
     save_image_16(outfn + ".tiff", rgb, verbose = verbose)
 
