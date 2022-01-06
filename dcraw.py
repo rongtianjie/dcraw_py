@@ -1,8 +1,8 @@
 from dcraw_utils import *
+from other.image_utils import *
 import sys
 import getopt
 import os
-from other.image_utils import findAllSuffix, findRawImage, save_image_16
 
 def imread(infile, path = None, suffix = ".RAF", verbose = False):
     if path == None:
@@ -32,7 +32,7 @@ def postprocessing(rawData, use_rawpy_postprocessing = False, suffix = ".RAF", p
 
     rawImage_wb = scale_colors(rawImage_blc, rawData, verbose)
     
-    image_demosaiced = demosaicing(rawImage_wb, rawData.color_desc, demosacing_method, verbose)
+    image_demosaiced = demosaicing(rawImage_wb, rawData, demosacing_method, verbose)
 
     if debug:
         save_image_16("debug_demosaiced.tiff", image_demosaiced)

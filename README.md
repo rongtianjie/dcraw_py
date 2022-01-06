@@ -55,6 +55,7 @@ The main ISP implementation is contained in
     - 0 - colour_demosaicing.demosaicing_CFA_Bayer_bilinear
     - 1 - colour_demosaicing.demosaicing_CFA_Bayer_Malvar2004
     - 2 - colour_demosaicing.demosaicing_CFA_Bayer_Menon2007
+    - 4 - AMaZE demosaic (still under development)
 
         > Malvar2004 will generate false color when image has bright dots.
         >

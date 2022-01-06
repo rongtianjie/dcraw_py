@@ -5,6 +5,7 @@ import cam_data
 import colour_demosaicing
 import random
 from other.image_utils import findAllSuffix, findRawImage, rgb2gray, crop_image
+from demosaic_pack import amaze_demosaic
 
 # Define margin for raw data
 # Actural effiective resolution is 11664 x 8749
@@ -142,11 +143,11 @@ def scale_colors(src, raw, verbose):
 
     return rslt.astype(np.uint16)
 
-def demosaicing(src, color_desc, DEMOSACING_METHOD, verbose):
+def demosaicing(src, raw, DEMOSACING_METHOD, verbose):
     # Demosaicing. Default using colour_demosaicing.demosaicing_CFA_Bayer_bilinear
     if verbose:
         print("Start demosaicing.")
-    color_desc = str(color_desc, 'utf-8')
+    color_desc = str(raw.color_desc, 'utf-8')
 
     Bayer_Pattern = color_desc[:2] + color_desc[3] + color_desc[2]
 
@@ -162,6 +163,11 @@ def demosaicing(src, color_desc, DEMOSACING_METHOD, verbose):
         if verbose:
             print("Demosacing using [{}]...".format(method))
         rslt = method(src, Bayer_Pattern)
+
+    elif DEMOSACING_METHOD == 4:
+        if verbose:
+            print("Demosacing using AMaZE")
+        rslt = amaze_demosaic(src, raw)
 
     else:
         print("Can not find the DEMOSACING_METHOD.")

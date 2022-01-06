@@ -4,7 +4,6 @@ from numba import jit
 def fc(cfa, r, c):
     return cfa[r&1, c&1]
 
-
 def intp(a, b, c):
     return a * (b - c) + c
 
