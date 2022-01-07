@@ -1,3 +1,5 @@
+import sys
+sys.path.append("..")
 import numpy as np
 import cv2
 from matplotlib import pyplot as plt
@@ -103,14 +105,14 @@ def raw_info(raw):
     print(raw.raw_image_visible.shape)
 
 if __name__ == "__main__":
-    infn = "DSCF3396.RAF"
+    infn = ""
     suffix = ".RAF"
 
     if infn == "":
         infn = sys.argv[1]
 
-    fileList = findAllSuffix(sys.path[0]+"/images", suffix)
-    infPath = findRawImage(infn, fileList, suffix)
+    fileList = findAllSuffix(sys.path[0]+"/../images", suffix, False)
+    infPath = findRawImage(infn, fileList, suffix, False)
     rawData = dcraw_utils.importRawImage(infPath)
 
     raw_info(rawData)

@@ -19,7 +19,7 @@ def amaze_demosaic(src, raw):
 
     return rgb
 
-@jit()
+# @jit()
 def amaze_demosaic_libraw(src, cfarray, daylight_wb):
 
     TS = 512

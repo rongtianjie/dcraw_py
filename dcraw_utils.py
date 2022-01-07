@@ -90,7 +90,7 @@ def overwrite_imagedata(r, cam_model, verbose):
         if verbose:
             print("Overwrite image data with GFX100S.")
         data = cam_data.GFX100S()
-        raw = rawData(data.black_level_per_channel, r.camera_white_level_per_channel, data.camera_whitebalance, data.color_desc, r.color_matrix, data.daylight_whitebalance, data.num_colors, r.raw_colors, r.raw_image, data.raw_pattern, r. raw_type, data.rgb_xyz_matrix, data.sizes, data.tone_curve, data.white_level)
+        raw = rawData(data.black_level_per_channel, r.camera_white_level_per_channel, r.camera_whitebalance, data.color_desc, r.color_matrix, data.daylight_whitebalance, data.num_colors, r.raw_colors, r.raw_image, data.raw_pattern, r. raw_type, data.rgb_xyz_matrix, data.sizes, data.tone_curve, data.white_level)
     else:
         raw = r
     
