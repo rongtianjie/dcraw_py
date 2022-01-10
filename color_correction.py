@@ -45,9 +45,11 @@ def auto_bright(image_lrgb, dst_avg = 0.17, verbose = False):
     if image_lrgb.mean() < dst_avg:
         ratio = dst_avg / image_lrgb.mean()
         image_lrgb *= ratio
+        if verbose:
+            print("Auto bright ratio: {}".format(ratio))
     return image_lrgb, ratio
 
-def getColorCorrectionSwatches(image_lrgb, auto_shink = True, IMAGE_BLUR = True, verbose = False):
+def getColorCorrectionSwatches(image_lrgb, auto_shink = False, IMAGE_BLUR = True, verbose = False):
     # The input image should convert to linear RGB with colour.cctf_decoding()
     if auto_shink:
         if max(image_lrgb.shape[0], image_lrgb.shape[1]) > 1500:
@@ -89,6 +91,7 @@ def correction(image_lrgb, swatch, checker = CreateSpyderCheck(), verbose = Fals
     # the input image should be 16-bit sRGB
     D65 = colour.CCS_ILLUMINANTS['CIE 1931 2 Degree Standard Observer']['D65']
     REFERENCE_COLOUR_CHECKER = checker
+    # REFERENCE_COLOUR_CHECKER = colour.COLOURCHECKERS['ColorChecker 2005']
 
     REFERENCE_SWATCHES = colour.XYZ_to_RGB(
         colour.xyY_to_XYZ(list(REFERENCE_COLOUR_CHECKER.data.values())),
