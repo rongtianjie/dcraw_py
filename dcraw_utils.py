@@ -5,7 +5,7 @@ import cam_data
 import colour_demosaicing
 import random
 from other.image_utils import findAllSuffix, findRawImage, rgb2gray, crop_image
-from demosaic_pack import amaze_demosaic
+from demosaic_pack import *
 
 # Define margin for raw data
 # Actural effiective resolution is 11664 x 8749
@@ -26,6 +26,8 @@ d65_white = np.array([0.95047, 1, 1.08883])
 
 
 class rawData:
+    raw_image_visible = None
+    raw_colors_visible = None
     def __init__(self, blpc, wlpc, cwb, cd, cm, dwb, nc, rc, ri, rp, rt, rgbxyz, sizes, tc, wl):
         self.black_level_per_channel = blpc
         self.camera_white_level_per_channel = wlpc
@@ -91,10 +93,16 @@ def overwrite_imagedata(r, cam_model, verbose):
             print("Overwrite image data with GFX100S.")
         data = cam_data.GFX100S()
         raw = rawData(data.black_level_per_channel, r.camera_white_level_per_channel, r.camera_whitebalance, data.color_desc, r.color_matrix, data.daylight_whitebalance, data.num_colors, r.raw_colors, r.raw_image, data.raw_pattern, r. raw_type, data.rgb_xyz_matrix, data.sizes, data.tone_curve, data.white_level)
+
+        raw.raw_image_visible = raw.raw_image[raw.sizes.top_margin:raw.sizes.top_margin+raw.sizes.iheight, raw.sizes.left_margin:raw.sizes.left_margin+raw.sizes.iwidth]
+        raw.raw_colors_visible = raw.raw_colors[raw.sizes.top_margin:raw.sizes.top_margin+raw.sizes.iheight, raw.sizes.left_margin:raw.sizes.left_margin+raw.sizes.iwidth]
     else:
         if verbose:
             print("Overwrite image data with raw file.")
         raw = rawData(r.black_level_per_channel, r.camera_white_level_per_channel, r.camera_whitebalance, r.color_desc, r.color_matrix, r.daylight_whitebalance, r.num_colors, r.raw_colors, r.raw_image, r.raw_pattern, r. raw_type, r.rgb_xyz_matrix, r.sizes, r.tone_curve, r.white_level)
+
+        raw.raw_image_visible = r.raw_image_visible
+        raw.raw_colors_visible = r.raw_colors_visible
     
     return raw
 
@@ -105,11 +113,18 @@ def blc(raw):
     # Output will be crop by rawpy "_visible" 
     # On GFX100S, image size is 8752 * 11662
 
-    rslt = raw.raw_image[raw.sizes.top_margin:raw.sizes.top_margin+raw.sizes.iheight, raw.sizes.left_margin:raw.sizes.left_margin+raw.sizes.iwidth].astype(np.int32)
+    rslt = raw.raw_image_visible.astype(np.int32)
     for i, bl in enumerate(raw.black_level_per_channel):
-        rslt[raw.raw_colors[raw.sizes.top_margin:raw.sizes.top_margin+raw.sizes.iheight, raw.sizes.left_margin:raw.sizes.left_margin+raw.sizes.iwidth] == i] -= bl
+        rslt[raw.raw_colors_visible == i] -= bl
 
     return CLIP(rslt)
+
+def green_channel_equilibrium(src, raw):
+    g2_ratio = src[raw.raw_colors_visible == 1].sum() / src[raw.raw_colors_visible == 3].sum()
+    m = np.ones(src.shape, dtype=np.float32)
+    m[raw.raw_colors_visible == 3] = g2_ratio
+    rslt = src * m
+    return CLIP(rslt).astype(np.uint16)
 
 def scale_colors(src, raw, verbose):
     if verbose:
@@ -136,7 +151,7 @@ def scale_colors(src, raw, verbose):
     scale_matrix = np.empty([raw.sizes.iheight, raw.sizes.iwidth], dtype=np.float32)
 
     for i, scale_co in  enumerate(scale_coeff):
-        scale_matrix[raw.raw_colors[raw.sizes.top_margin:raw.sizes.top_margin+raw.sizes.iheight, raw.sizes.left_margin:raw.sizes.left_margin+raw.sizes.iwidth] == i] = scale_co
+        scale_matrix[raw.raw_colors_visible == i] = scale_co
 
     rslt = CLIP(src * scale_matrix)
 

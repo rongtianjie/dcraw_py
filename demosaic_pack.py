@@ -1,4 +1,5 @@
 import numpy as np
+import cv2
 
 def fc(cfa, r, c):
     return cfa[r&1, c&1]
@@ -8,7 +9,7 @@ def intp(a, b, c):
 
 def SQR(x):
     return x ** 2
-
+    
 def amaze_demosaic(src, raw):
 
     cfarray = raw.raw_colors

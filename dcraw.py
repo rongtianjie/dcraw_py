@@ -30,7 +30,9 @@ def postprocessing(rawData, use_rawpy_postprocessing = False, suffix = ".RAF", p
 
     rawImage_blc = blc(rawData)
 
-    rawImage_wb = scale_colors(rawImage_blc, rawData, verbose)
+    rawImage_ge = green_channel_equilibrium(rawImage_blc, rawData)
+
+    rawImage_wb = scale_colors(rawImage_ge, rawData, verbose)
     
     image_demosaiced = demosaicing(rawImage_wb, rawData, demosacing_method, verbose)
 
