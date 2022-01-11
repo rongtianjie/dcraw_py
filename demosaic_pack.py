@@ -1,5 +1,4 @@
 import numpy as np
-from numba import jit
 
 def fc(cfa, r, c):
     return cfa[r&1, c&1]
@@ -19,7 +18,6 @@ def amaze_demosaic(src, raw):
 
     return rgb
 
-# @jit()
 def amaze_demosaic_libraw(src, cfarray, daylight_wb):
 
     TS = 512
