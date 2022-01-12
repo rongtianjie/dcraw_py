@@ -4,7 +4,7 @@ import rawpy.enhance
 import cam_data
 import colour_demosaicing
 import random
-from other.image_utils import findAllSuffix, findRawImage, rgb2gray, crop_image
+from other.image_utils import *
 from demosaic_pack import *
 
 # Define margin for raw data
@@ -180,6 +180,11 @@ def demosaicing(src, raw, DEMOSACING_METHOD, verbose):
         if verbose:
             print("Demosacing using [{}]...".format(method))
         rslt = method(src, Bayer_Pattern)
+    
+    elif DEMOSACING_METHOD == 3:
+        if verbose:
+            print("Demosacing using MHC")
+        rslt = mhc_demosaic(src, raw)
 
     elif DEMOSACING_METHOD == 4:
         if verbose:
