@@ -53,35 +53,38 @@ def rgb2lab(X):
 def masks_Bayer(im, pattern):
     w, h = im.shape
     R = np.zeros((w, h))
-    G = np.zeros((w, h))
+    GR = np.zeros((w, h))
+    GB = np.zeros((w, h))
     B = np.zeros((w, h))
 
     # 将对应位置的元素取出来,因为懒所以没有用效率最高的方法,大家可以自己去实现
     if pattern == "RGGB":
         R[::2, ::2] = 1
-        G[::2, 1::2] = 1
-        G[1::2, ::2] = 1
+        GR[::2, 1::2] = 1
+        GB[1::2, ::2] = 1
         B[1::2, 1::2] = 1
     elif pattern == "GRBG":
-        G[::2, ::2] = 1
+        GR[::2, ::2] = 1
         R[::2, 1::2] = 1
         B[1::2, ::2] = 1
-        G[1::2, 1::2] = 1
+        GB[1::2, 1::2] = 1
     elif pattern == "GBRG":
-        G[::2, ::2] = 1
+        GB[::2, ::2] = 1
         B[::2, 1::2] = 1
         R[1::2, ::2] = 1
-        G[1::2, 1::2] = 1
+        GR[1::2, 1::2] = 1
     elif pattern == "BGGR":
         B[::2, ::2] = 1
-        G[::2, 1::2] = 1
-        G[1::2, ::2] = 1
+        GB[::2, 1::2] = 1
+        GR[1::2, ::2] = 1
         R[1::2, 1::2] = 1
     else:
-        print("pattern must be one of: RGGB, GBRG, GBRG, or BGGR")
+        print("pattern must be one of :  RGGB, GBRG, GBRG, or BGGR")
         return
-
-    return R, G, B
+    R_m = R
+    G_m = GB + GR
+    B_m = B
+    return R_m, G_m, B_m
 
 def AH_gradient(img, pattern):
     X = img
@@ -93,7 +96,7 @@ def AH_gradient(img, pattern):
     Hg1 = Hg1.reshape(1, -1)
     Hg2 = Hg2.reshape(1, -1)
     # 如果当前像素是绿色就用绿色梯度，不是绿色就用颜色加上绿色梯度
-    Ga = (Rm + Bm) * (np.abs(convolve(X, Hg1, 'same')) + np.abs(convolve(X, Hg2, 'same')))
+    Ga = (Rm + Bm) * (np.abs(convolve(X, Hg1, mode = 'constant')) + np.abs(convolve(X, Hg2, mode = 'constant')))
 
     return Ga
 
@@ -131,12 +134,12 @@ def AH_interpolate(img, pattern, gamma, max_value):
     Hg2 = np.array([-1 / 4, 0, 1 / 2, 0, -1 / 4])
     Hg = Hg1 + Hg2 * gamma  # shape 为 (5,) 矩阵Hg参考公众号的论文
     Hg = Hg.reshape(1, -1)  # shape 为 (1,5)
-    G = Gm * X + (Rm + Bm) * convolve(X, Hg, mode='same')  # 得到所有的G
+    G = Gm * X + (Rm + Bm) * convolve(X, Hg, mode = 'constant')  # 得到所有的G
 
     # red / blue
     Hr = [[1 / 4, 1 / 2, 1 / 4], [1 / 2, 1, 1 / 2], [1 / 4, 1 / 2, 1 / 4]]
-    R = G + convolve(Rm * (X - G), Hr, 'same')
-    B = G + convolve(Bm * (X - G), Hr, 'same')
+    R = G + convolve(Rm * (X - G), Hr, mode = 'constant')
+    B = G + convolve(Bm * (X - G), Hr, mode = 'constant')
 
     R = np.clip(R, 0, max_value)
     G = np.clip(G, 0, max_value)
@@ -220,17 +223,17 @@ def MNparamA(YxLAB, YyLAB):
     kernel_V1 = kernel_H1.reshape(1, -1).T  # shape:(3, 1) 相当于把一个一维矩阵顺时针转90度。
     kernel_V2 = kernel_H2.reshape(1, -1).T
 
-    eLM1 = np.maximum(np.abs(convolve(X[:, :, 0], kernel_H1, 'same')),
-                      np.abs(convolve(X[:, :, 0], kernel_H2, 'same')))
-    eLM2 = np.maximum(np.abs(convolve(Y[:, :, 0], kernel_V1, 'same')),
-                      np.abs(convolve(Y[:, :, 0], kernel_V2, 'same')))
+    eLM1 = np.maximum(np.abs(convolve(X[:, :, 0], kernel_H1, mode = 'constant')),
+                      np.abs(convolve(X[:, :, 0], kernel_H2, mode = 'constant')))
+    eLM2 = np.maximum(np.abs(convolve(Y[:, :, 0], kernel_V1, mode = 'constant')),
+                      np.abs(convolve(Y[:, :, 0], kernel_V2, mode = 'constant')))
     eL = np.minimum(eLM1, eLM2)
     eCx = np.maximum(
-        convolve(X[:, :, 1], kernel_H1, 'same') ** 2 + convolve(X[:, :, 2], kernel_H1, 'same') ** 2,
-        convolve(X[:, :, 1], kernel_H2, 'same') ** 2 + convolve(X[:, :, 2], kernel_H2, 'same') ** 2)
+        convolve(X[:, :, 1], kernel_H1, mode = 'constant') ** 2 + convolve(X[:, :, 2], kernel_H1, mode = 'constant') ** 2,
+        convolve(X[:, :, 1], kernel_H2, mode = 'constant') ** 2 + convolve(X[:, :, 2], kernel_H2, mode = 'constant') ** 2)
     eCy = np.maximum(
-        convolve(Y[:, :, 1], kernel_V2, 'same') ** 2 + convolve(Y[:, :, 2], kernel_V2, 'same') ** 2,
-        convolve(Y[:, :, 1], kernel_V1, 'same') ** 2 + convolve(Y[:, :, 2], kernel_V1, 'same') ** 2)
+        convolve(Y[:, :, 1], kernel_V2, mode = 'constant') ** 2 + convolve(Y[:, :, 2], kernel_V2, mode = 'constant') ** 2,
+        convolve(Y[:, :, 1], kernel_V1, mode = 'constant') ** 2 + convolve(Y[:, :, 2], kernel_V1, mode = 'constant') ** 2)
     eC = np.minimum(eCx, eCy)
     eL = eL  # 相当于imatest计算 delta L
     eC = eC ** 0.5  # 相当于imatest计算 delta C  (delta L) ** 2 + (delta C) ** 2 = (delta E) ** 2
@@ -249,9 +252,9 @@ def MNhomogeneity(LAB_image, delta, epsilonL, epsilonC):
     print(H.shape, X.shape)  # (5, 5, 13) (788, 532, 3)
     # 注意浮点数精度可能会有影响
     for i in range(kc):
-        L = np.abs(convolve(X[:, :, 0], H[:, :, i], 'same') - X[:, :, 0]) <= epsilonL  # level set
-        C = ((convolve(X[:, :, 1], H[:, :, i], 'same') - X[:, :, 1]) ** 2 + (
-                    convolve(X[:, :, 2], H[:, :, i], 'same') - X[:, :, 2]) ** 2) <= epsilonC_sq  # color set
+        L = np.abs(convolve(X[:, :, 0], H[:, :, i], mode = 'constant') - X[:, :, 0]) <= epsilonL  # level set
+        C = ((convolve(X[:, :, 1], H[:, :, i], mode = 'constant') - X[:, :, 1]) ** 2 + (
+                    convolve(X[:, :, 2], H[:, :, i], mode = 'constant') - X[:, :, 2]) ** 2) <= epsilonC_sq  # color set
         U = C & L  # metric neighborhood 度量邻域
         K = K + U  # homogeneity 同质性
         # print(L.shape, C.shape, U.shape, K.shape)  # shape 都是 (788, 532)
@@ -278,41 +281,41 @@ def MNartifact(R, G, B, iterations):
     kernel_9 = np.array([[0, 0, 0], [0, 0, 0], [0, 0, 1]])
 
     for i in range(iterations):
-        Rt[:, :, 0] = convolve(R - G, kernel_1, 'same')
-        Rt[:, :, 1] = convolve(R - G, kernel_2, 'same')
-        Rt[:, :, 2] = convolve(R - G, kernel_3, 'same')
-        Rt[:, :, 3] = convolve(R - G, kernel_4, 'same')
-        Rt[:, :, 4] = convolve(R - G, kernel_6, 'same')
-        Rt[:, :, 5] = convolve(R - G, kernel_7, 'same')
-        Rt[:, :, 6] = convolve(R - G, kernel_8, 'same')
-        Rt[:, :, 7] = convolve(R - G, kernel_9, 'same')
+        Rt[:, :, 0] = convolve(R - G, kernel_1, mode = 'constant')
+        Rt[:, :, 1] = convolve(R - G, kernel_2, mode = 'constant')
+        Rt[:, :, 2] = convolve(R - G, kernel_3, mode = 'constant')
+        Rt[:, :, 3] = convolve(R - G, kernel_4, mode = 'constant')
+        Rt[:, :, 4] = convolve(R - G, kernel_6, mode = 'constant')
+        Rt[:, :, 5] = convolve(R - G, kernel_7, mode = 'constant')
+        Rt[:, :, 6] = convolve(R - G, kernel_8, mode = 'constant')
+        Rt[:, :, 7] = convolve(R - G, kernel_9, mode = 'constant')
 
         Rm = np.median(Rt, axis=2)
         R = G + Rm
 
-        Bt[:, :, 0] = convolve(B - G, kernel_1, 'same')
-        Bt[:, :, 1] = convolve(B - G, kernel_2, 'same')
-        Bt[:, :, 2] = convolve(B - G, kernel_3, 'same')
-        Bt[:, :, 3] = convolve(B - G, kernel_4, 'same')
-        Bt[:, :, 4] = convolve(B - G, kernel_6, 'same')
-        Bt[:, :, 5] = convolve(B - G, kernel_7, 'same')
-        Bt[:, :, 6] = convolve(B - G, kernel_8, 'same')
-        Bt[:, :, 7] = convolve(B - G, kernel_9, 'same')
+        Bt[:, :, 0] = convolve(B - G, kernel_1, mode = 'constant')
+        Bt[:, :, 1] = convolve(B - G, kernel_2, mode = 'constant')
+        Bt[:, :, 2] = convolve(B - G, kernel_3, mode = 'constant')
+        Bt[:, :, 3] = convolve(B - G, kernel_4, mode = 'constant')
+        Bt[:, :, 4] = convolve(B - G, kernel_6, mode = 'constant')
+        Bt[:, :, 5] = convolve(B - G, kernel_7, mode = 'constant')
+        Bt[:, :, 6] = convolve(B - G, kernel_8, mode = 'constant')
+        Bt[:, :, 7] = convolve(B - G, kernel_9, mode = 'constant')
 
         Bm = np.median(Bt, axis=2)
         B = G + Bm
 
-        Grt[:, :, 0] = convolve(G - R, kernel_2, 'same')
-        Grt[:, :, 1] = convolve(G - R, kernel_4, 'same')
-        Grt[:, :, 2] = convolve(G - R, kernel_6, 'same')
-        Grt[:, :, 3] = convolve(G - R, kernel_8, 'same')
+        Grt[:, :, 0] = convolve(G - R, kernel_2, mode = 'constant')
+        Grt[:, :, 1] = convolve(G - R, kernel_4, mode = 'constant')
+        Grt[:, :, 2] = convolve(G - R, kernel_6, mode = 'constant')
+        Grt[:, :, 3] = convolve(G - R, kernel_8, mode = 'constant')
         Grm = np.median(Grt, axis=2)
         Gr = R + Grm
 
-        Gbt[:, :, 0] = convolve(G - B, kernel_2, 'same')
-        Gbt[:, :, 1] = convolve(G - B, kernel_4, 'same')
-        Gbt[:, :, 2] = convolve(G - B, kernel_6, 'same')
-        Gbt[:, :, 3] = convolve(G - B, kernel_8, 'same')
+        Gbt[:, :, 0] = convolve(G - B, kernel_2, mode = 'constant')
+        Gbt[:, :, 1] = convolve(G - B, kernel_4, mode = 'constant')
+        Gbt[:, :, 2] = convolve(G - B, kernel_6, mode = 'constant')
+        Gbt[:, :, 3] = convolve(G - B, kernel_8, mode = 'constant')
         Gbm = np.median(Gbt, axis=2)
         Gb = B + Gbm
         G = (Gr + Gb) / 2
@@ -380,8 +383,8 @@ def ahd_demosaic(bayer, pattern, delta = 2, gamma = 1):
     Hy = MNhomogeneity(YyLAB, delta, epsilonL, epsilonC)
 
     f_kernel = np.ones((3, 3))
-    Hx = convolve(Hx, f_kernel, 'same')
-    Hy = convolve(Hy, f_kernel, 'same')
+    Hx = convolve(Hx, f_kernel, mode = 'constant')
+    Hy = convolve(Hy, f_kernel, mode = 'constant')
 
     R = Yx[:, :, 0]
     G = Yx[:, :, 1]
