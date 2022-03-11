@@ -5,7 +5,7 @@ import cam_data
 import colour_demosaicing
 import random
 from other.image_utils import *
-from demosaic_pack import *
+from demosaic_pack.demosaic import *
 
 # Define margin for raw data
 # Actural effiective resolution is 11664 x 8749
