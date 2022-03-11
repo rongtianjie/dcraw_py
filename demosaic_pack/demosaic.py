@@ -11,4 +11,7 @@ def mhc_demosaic():
 def ahd_demosaic(src, pattern):
     ahd(src, pattern)
 
+def amaze_demosaic(src, pattern):
+    print("empty")
+    pass
 
