@@ -49,43 +49,48 @@ def auto_bright(image_lrgb, dst_avg = 0.17, verbose = False):
             print("Auto bright ratio: {}".format(ratio))
     return image_lrgb, ratio
 
-def getColorCorrectionSwatches(image_lrgb, auto_shink = False, IMAGE_BLUR = True, verbose = False):
+def getColorCorrectionSwatches(image_lrgb, auto_shink = False, IMAGE_BLUR = 11, verbose = False):
     # The input image should convert to linear RGB with colour.cctf_decoding()
     if auto_shink:
         if max(image_lrgb.shape[0], image_lrgb.shape[1]) > 1500:
             ratio = 1000 / max(image_lrgb.shape[0], image_lrgb.shape[1])
             image_lrgb = cv2.resize(image_lrgb, (0, 0), fx = ratio, fy = ratio)
     if IMAGE_BLUR:
-        image_blur = cv2.GaussianBlur(image_lrgb, (11, 11), 0)
+        image_blur = cv2.GaussianBlur(image_lrgb, (IMAGE_BLUR, IMAGE_BLUR), 0)
     else:
         image_blur = image_lrgb
     
-    swatch = detection(image_blur, verbose)
+    swatch = detection(image_blur, 48, verbose)
 
     return swatch
 
 # The input image should be in linear RGB
-def detection(image, verbose = False):
+def detection(image, samples_size, verbose = False):
     SWATCHES = []
-    for swatches, colour_checker, masks in detect_colour_checkers_segmentation(
-        image, additional_data=True):
-        SWATCHES.append(swatches)
 
+    for colour_checker_swatches_data in detect_colour_checkers_segmentation(
+        image, samples=samples_size, additional_data=True):
+        swatch_colours, colour_checker_image, swatch_masks = (
+            colour_checker_swatches_data.values)
+        SWATCHES.append(swatch_colours)
+        
         if verbose:
             # Using the additional data to plot the colour checker and masks.
-            masks_i = np.zeros(colour_checker.shape)
-            for i, mask in enumerate(masks):
+            masks_i = np.zeros(colour_checker_image.shape)
+            for i, mask in enumerate(swatch_masks):
                 masks_i[mask[0]:mask[1], mask[2]:mask[3], ...] = 1
             colour.plotting.plot_image(
                 colour.cctf_encoding(
-                    np.clip(colour_checker + masks_i * 0.25, 0, 1)))
-
-    print("Found {} swatches.".format(len(SWATCHES)))
+                    np.clip(colour_checker_image + masks_i * 0.25, 0, 1)))
+    if verbose:
+        print("Found {} swatches.".format(len(SWATCHES)))
 
     if len(SWATCHES) == 1:
         return SWATCHES[0]
     else:
-        print("ERROR. Can't find or found multiple swatches.")
+        if verbose:
+            print("ERROR. Can't find or found multiple swatches.")
+        return None
 
 def correction(image_lrgb, swatch, checker = CreateSpyderCheck(), verbose = False):
     # the input image should be 16-bit sRGB
@@ -121,6 +126,7 @@ def correction(image_lrgb, swatch, checker = CreateSpyderCheck(), verbose = Fals
         colour.plotting.plot_image(colour.cctf_encoding(cc_image))
 
     return cc_image
+
 
 if __name__ == "__main__":
     print("This is the colour correction w/ colour checker script.")
