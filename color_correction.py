@@ -121,6 +121,10 @@ def correction(image_lrgb, swatch, checker = CreateSpyderCheck(), verbose = Fals
             [REFERENCE_COLOUR_CHECKER, colour_checker])
 
     cc_image = colour.colour_correction(image_lrgb, swatch, REFERENCE_SWATCHES)
+    
+    # if np.min(cc_image) < 0:
+    #     cc_image -= np.min(cc_image)
+    # cc_image = cc_image/np.max(cc_image)
 
     if verbose:
         colour.plotting.plot_image(colour.cctf_encoding(cc_image))
